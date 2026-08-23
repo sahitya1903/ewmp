@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import RoleGuard from "@/components/RoleGuard";
 import { apiFetch } from "@/lib/api";
 import { ROLE_NAMES } from "@/lib/roles";
 
 function ChangePasswordForm() {
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,13 +31,11 @@ function ChangePasswordForm() {
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      setMessage("Password updated successfully.");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setMessage("Password updated. Redirecting to login...");
+      await apiFetch("/auth/logout", { method: "POST" }).catch(() => {});
+      setTimeout(() => router.push("/login"), 1500);
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   }

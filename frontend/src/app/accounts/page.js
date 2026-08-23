@@ -5,8 +5,8 @@ export default function AccountsPage() {
   return (
     <RoleGuard allowedRoles={["Accounts_E"]}>
       <AccountMenu />
-      <main className="p-10">
-        <h1 className="text-xl font-semibold">Accounts Dashboard</h1>
+      <main className="min-h-screen bg-slate-50 p-10">
+        <h1 className="text-xl font-semibold text-slate-900">Accounts Dashboard</h1>
         <p className="mt-2 text-sm text-slate-600">
           Placeholder for Accounts_E — salary details, credited checkbox, company expense overview go here (Phase 4).
         </p>
