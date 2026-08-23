@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_TTL = "7d";
@@ -24,4 +25,14 @@ export function verifyToken(token) {
   } catch {
     return null;
   }
+}
+
+export function generateResetToken() {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = hashResetToken(rawToken);
+  return { rawToken, hashedToken };
+}
+
+export function hashResetToken(rawToken) {
+  return crypto.createHash("sha256").update(rawToken).digest("hex");
 }

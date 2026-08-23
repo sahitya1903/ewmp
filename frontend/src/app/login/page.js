@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
 export default function LoginPage() {
@@ -62,8 +63,14 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-        {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Signing in..." : "Sign in"}
         </button>
+
+        <p className="mt-4 text-center text-sm text-slate-600">
+          <Link href="/forgot-password" className="underline">
+            Forgot password?
+          </Link>
+        </p>
       </form>
     </main>
   );
