@@ -1,8 +1,10 @@
 import RoleGuard from "@/components/RoleGuard";
+import AccountMenu from "@/components/AccountMenu";
 
 export default function DashboardPage() {
   return (
     <RoleGuard allowedRoles={["Developer_E", "Cyber Security_E", "Social Media & Performance Marketing_E"]}>
+      <AccountMenu />
       <main className="p-10">
         <h1 className="text-xl font-semibold">Employee Dashboard</h1>
         <p className="mt-2 text-sm text-slate-600">
