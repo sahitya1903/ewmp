@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import AccountMenu from "@/components/AccountMenu";
+import LeaveRequestsPanel from "@/components/LeaveRequestsPanel";
 import { apiFetch } from "@/lib/api";
 import { ROLE_NAMES, ROLE_LABELS } from "@/lib/roles";
 
@@ -18,6 +19,7 @@ const EMPTY_FORM = {
 };
 
 function ManagementConsole() {
+  const [tab, setTab] = useState("employees");
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -124,8 +126,33 @@ function ManagementConsole() {
       <AccountMenu />
       <main className="min-h-screen bg-slate-50 p-10">
         <div className="mx-auto max-w-5xl">
+          <h1 className="mb-4 text-xl font-semibold text-slate-900">Management Dashboard</h1>
+
+          <div className="mb-6 flex items-center gap-2">
+            <button
+              onClick={() => setTab("employees")}
+              className={`rounded px-3 py-1.5 text-sm ${
+                tab === "employees" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              Employees
+            </button>
+            <button
+              onClick={() => setTab("leave")}
+              className={`rounded px-3 py-1.5 text-sm ${
+                tab === "leave" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              Leave Requests
+            </button>
+          </div>
+
+          {tab === "leave" && <LeaveRequestsPanel />}
+
+          {tab === "employees" && (
+        <>
           <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-slate-900">Employees</h1>
+            <h2 className="text-lg font-semibold text-slate-900">Employees</h2>
             <button
               onClick={openCreateForm}
               className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white"
@@ -311,6 +338,8 @@ function ManagementConsole() {
                 </div>
               </form>
             </div>
+          )}
+        </>
           )}
         </div>
       </main>
