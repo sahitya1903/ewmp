@@ -7,6 +7,7 @@ import employeeRoutes from "./routes/employees.js";
 import leaveRequestRoutes from "./routes/leaveRequests.js";
 import attendanceRoutes from "./routes/attendance.js";
 import holidayRoutes from "./routes/holidays.js";
+import salaryRoutes from "./routes/salaries.js";
 
 const PORT = process.env.PORT || 4000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
@@ -23,6 +24,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/leave-requests", leaveRequestRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/holidays", holidayRoutes);
+app.use("/api/salaries", salaryRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
