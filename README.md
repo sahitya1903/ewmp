@@ -39,5 +39,5 @@ Log in at `http://localhost:3000/login` — seeded test accounts are listed in `
 
 1. `frontend` posts credentials to `backend`'s `POST /api/auth/login`, `credentials: "include"`.
 2. `backend` verifies the password, signs a JWT, and sets it as an httpOnly cookie.
-3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/management` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
+3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/hr` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
 4. Each protected page wraps its content in `<RoleGuard allowedRoles={[...]}>`, which calls `backend`'s `GET /api/auth/me` client-side to confirm the actual role and redirects to `/login` if it doesn't match.
