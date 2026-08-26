@@ -1,5 +1,8 @@
 import LeaveRequest from "../models/LeaveRequest.js";
 import Attendance from "../models/Attendance.js";
+import User from "../models/User.js";
+import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
+import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
 
 function toDateOnly(value) {
   const date = new Date(value);
@@ -18,6 +21,11 @@ function eachDate(from, to) {
   return dates;
 }
 
+function currentMonthYear() {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
+
 export async function applyLeave(req, res) {
   const { fromDate, toDate, reason } = req.body;
 
@@ -30,6 +38,10 @@ export async function applyLeave(req, res) {
 
   if (from > to) {
     return res.status(400).json({ error: "fromDate must be on or before toDate" });
+  }
+
+  if (from < toDateOnly(new Date())) {
+    return res.status(400).json({ error: "Leave can only be applied for today or a future date" });
   }
 
   const leaveRequest = await LeaveRequest.create({
@@ -78,12 +90,24 @@ export async function reviewLeaveRequest(req, res) {
   await leaveRequest.save();
 
   if (status === "Approved") {
-    const dates = eachDate(leaveRequest.fromDate, leaveRequest.toDate);
+    const allDates = eachDate(leaveRequest.fromDate, leaveRequest.toDate);
+    const holidaySet = await getHolidaySet(allDates[0], new Date(allDates[allDates.length - 1].getTime() + 86400000));
+    const workingDates = allDates.filter((date) => isWorkingDay(date, holidaySet));
+
+    const assignments = await assignPaidStatusForDates(leaveRequest.user, workingDates);
+
     await Promise.all(
-      dates.map((date) =>
+      assignments.map(({ date, paid }) =>
         Attendance.findOneAndUpdate(
           { user: leaveRequest.user, date },
-          { $set: { status: "Leave", leaveRequest: leaveRequest._id, markedBy: req.user.sub } },
+          {
+            $set: {
+              status: "Leave",
+              paidLeave: paid,
+              leaveRequest: leaveRequest._id,
+              markedBy: req.user.sub,
+            },
+          },
           { upsert: true, setDefaultsOnInsert: true }
         )
       )
@@ -91,4 +115,38 @@ export async function reviewLeaveRequest(req, res) {
   }
 
   res.json({ leaveRequest });
+}
+
+export async function getLeaveBalanceForUser(req, res) {
+  const { month: defaultMonth, year: defaultYear } = currentMonthYear();
+  const month = Number(req.query.month) || defaultMonth;
+  const year = Number(req.query.year) || defaultYear;
+
+  let userId = req.user.sub;
+  if (["Admin", "Management"].includes(req.user.role) && req.query.userId) {
+    userId = req.query.userId;
+  }
+
+  const balance = await getLeaveBalance(userId, year, month);
+  res.json({ ...balance, month, year });
+}
+
+export async function listLeaveBalances(req, res) {
+  const { month: defaultMonth, year: defaultYear } = currentMonthYear();
+  const month = Number(req.query.month) || defaultMonth;
+  const year = Number(req.query.year) || defaultYear;
+
+  const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
+
+  const balances = await Promise.all(
+    users.map(async (user) => {
+      const balance = await getLeaveBalance(user._id, year, month);
+      return {
+        user: { id: user._id, employeeId: user.employeeId, name: user.name, role: user.role },
+        ...balance,
+      };
+    })
+  );
+
+  res.json({ balances, month, year });
 }
