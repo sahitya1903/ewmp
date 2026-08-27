@@ -16,7 +16,7 @@ export async function markAttendance(req, res) {
   const attendance = await Attendance.findOneAndUpdate(
     { user: userId, date: day },
     { $set: { status, markedBy: req.user.sub }, $unset: { leaveRequest: "" } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
 
   res.json({ attendance });
