@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import EmployeeProfile from "../models/EmployeeProfile.js";
 import {
   verifyPassword,
   signToken,
@@ -15,7 +16,8 @@ const ROLE_HOME = {
   "Social Media & Performance Marketing_E": "/dashboard",
   Accounts_E: "/accounts",
   Admin: "/admin",
-  Management: "/management",
+  Management: "/hr",
+  Intern: "/dashboard",
 };
 
 const COOKIE_OPTIONS = {
@@ -48,7 +50,8 @@ export async function login(req, res) {
 export async function me(req, res) {
   const user = await User.findById(req.user.sub).select("employeeId name email role");
   if (!user) return res.status(404).json({ error: "User not found" });
-  res.json({ user });
+  const profile = await EmployeeProfile.findOne({ user: user._id }).select("joiningDate");
+  res.json({ user: { ...user.toObject(), joiningDate: profile?.joiningDate ?? null } });
 }
 
 export function logout(req, res) {

@@ -5,7 +5,11 @@ export const ROLE_NAMES = [
   "Accounts_E",
   "Admin",
   "Management",
+  "Intern",
 ];
+
+// Roles selectable when adding/editing a regular employee (Intern is added via its own tab).
+export const EMPLOYEE_ROLE_NAMES = ROLE_NAMES.filter((role) => role !== "Intern");
 
 export const ROLE_LABELS = {
   Developer_E: "Developer",
@@ -14,4 +18,5 @@ export const ROLE_LABELS = {
   Accounts_E: "Accounts",
   Admin: "Admin",
   Management: "Management",
+  Intern: "Intern",
 };

@@ -3,6 +3,20 @@ import EmployeeProfile from "../models/EmployeeProfile.js";
 import { ROLE_NAMES } from "../models/Role.js";
 import { hashPassword } from "../lib/auth.js";
 
+async function generateEmployeeId(role) {
+  const prefix = role === "Intern" ? "INT" : "EMP";
+  const existing = await User.find({ employeeId: new RegExp(`^${prefix}\\d+$`) })
+    .select("employeeId")
+    .lean();
+
+  const maxNum = existing.reduce((max, u) => {
+    const num = parseInt(u.employeeId.slice(prefix.length), 10);
+    return Number.isFinite(num) ? Math.max(max, num) : max;
+  }, 0);
+
+  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
+}
+
 function toDTO(user, profile) {
   return {
     id: user._id,
@@ -28,9 +42,9 @@ export async function listEmployees(req, res) {
 }
 
 export async function createEmployee(req, res) {
-  const { employeeId, name, email, password, role, phone, monthlySalary, joiningDate } = req.body;
+  const { name, email, password, role, phone, monthlySalary, joiningDate } = req.body;
 
-  if (!employeeId || !name || !email || !password || !role || !phone || monthlySalary == null || !joiningDate) {
+  if (!name || !email || !password || !role || !phone || monthlySalary == null || !joiningDate) {
     return res.status(400).json({ error: "All fields are required" });
   }
   if (!ROLE_NAMES.includes(role)) {
@@ -41,6 +55,7 @@ export async function createEmployee(req, res) {
   }
 
   try {
+    const employeeId = await generateEmployeeId(role);
     const passwordHash = await hashPassword(password);
     const user = await User.create({
       employeeId,
@@ -102,7 +117,9 @@ export async function updateEmployee(req, res) {
   if (monthlySalary !== undefined) profileUpdate.monthlySalary = monthlySalary;
   if (joiningDate !== undefined) profileUpdate.joiningDate = new Date(joiningDate);
 
-  const profile = await EmployeeProfile.findOneAndUpdate({ user: user._id }, profileUpdate, { new: true });
+  const profile = await EmployeeProfile.findOneAndUpdate({ user: user._id }, profileUpdate, {
+    returnDocument: "after",
+  });
 
   res.json({ employee: toDTO(user, profile) });
 }
