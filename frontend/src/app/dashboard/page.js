@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import AccountMenu from "@/components/AccountMenu";
 import MonthCalendar, { toDateKey } from "@/components/MonthCalendar";
+import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
+import { currency, MONTH_NAMES } from "@/lib/format";
+import { useSalaries } from "@/lib/useSalaries";
 
 const STATUS_STYLES = {
   Pending: "bg-amber-50 text-amber-800 border-amber-300",
@@ -23,14 +26,32 @@ function today() {
   return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
+function previousMonth({ month, year }) {
+  return month === 1 ? { month: 12, year: year - 1 } : { month: month - 1, year };
+}
+
+function isWeekend(date) {
+  const day = date.getUTCDay();
+  return day === 0 || day === 6;
+}
+
 function EmployeeDashboard() {
   const [cursor, setCursor] = useState(today());
   const [entriesByDate, setEntriesByDate] = useState({});
   const [calendarLoading, setCalendarLoading] = useState(true);
+  const [joiningDateKey, setJoiningDateKey] = useState(null);
+
+  const thisMonth = today();
+  const lastMonth = previousMonth(thisMonth);
+  const { salaries: currentMonthSalaries } = useSalaries(thisMonth.month, thisMonth.year);
+  const { salaries: lastMonthSalaries } = useSalaries(lastMonth.month, lastMonth.year);
+  const mySalaryThisMonth = currentMonthSalaries[0];
+  const mySalaryLastMonth = lastMonthSalaries[0];
 
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(true);
   const [listError, setListError] = useState("");
+  const [leaveBalance, setLeaveBalance] = useState(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -57,6 +78,19 @@ function EmployeeDashboard() {
       for (const a of attendanceRes.attendance) {
         map[toDateKey(a.date)] = { type: ATTENDANCE_TYPE[a.status] ?? "present", label: a.status };
       }
+
+      // Default to Present for any past/current working day with no explicit
+      // record — an employee is only Absent if an admin marks them so.
+      const todayKey = toDateKey(new Date());
+      const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month, 0)).getUTCDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(Date.UTC(cursor.year, cursor.month - 1, d));
+        const key = toDateKey(date);
+        if (map[key] || key > todayKey || isWeekend(date)) continue;
+        if (joiningDateKey && key < joiningDateKey) continue;
+        map[key] = { type: "present", label: "Present" };
+      }
+
       setEntriesByDate(map);
     } catch {
       setEntriesByDate({});
@@ -81,10 +115,18 @@ function EmployeeDashboard() {
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor]);
+  }, [cursor, joiningDateKey]);
 
   useEffect(() => {
     loadLeaveRequests();
+    apiFetch("/leave-requests/balance")
+      .then(setLeaveBalance)
+      .catch(() => setLeaveBalance(null));
+    apiFetch("/auth/me")
+      .then((data) => {
+        if (data.user.joiningDate) setJoiningDateKey(toDateKey(data.user.joiningDate));
+      })
+      .catch(() => {});
   }, []);
 
   function prevMonth() {
@@ -131,6 +173,38 @@ function EmployeeDashboard() {
             Daily work updates and notifications are coming in a later phase — this page currently
             covers leave and the attendance/holiday calendar.
           </p>
+
+          <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {leaveBalance && (
+              <StatTile
+                label="Paid leaves remaining"
+                value={`${leaveBalance.remaining} / ${leaveBalance.quota}`}
+                sub="This month"
+              />
+            )}
+            {mySalaryLastMonth && (
+              <StatTile
+                label="Last month's salary"
+                value={currency(mySalaryLastMonth.salaryPayable)}
+                sub={
+                  mySalaryLastMonth.credited
+                    ? `Credited ${new Date(mySalaryLastMonth.creditedDate).toLocaleDateString()}`
+                    : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
+                }
+              />
+            )}
+            {mySalaryThisMonth && (
+              <StatTile
+                label="This month's salary due"
+                value={currency(mySalaryThisMonth.salaryPayable)}
+                sub={
+                  mySalaryThisMonth.deduction > 0
+                    ? `${currency(mySalaryThisMonth.deduction)} deducted so far`
+                    : `${MONTH_NAMES[thisMonth.month - 1]} ${thisMonth.year}`
+                }
+              />
+            )}
+          </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
@@ -217,6 +291,7 @@ function EmployeeDashboard() {
               <input
                 type="date"
                 required
+                min={toDateKey(new Date())}
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -226,6 +301,7 @@ function EmployeeDashboard() {
               <input
                 type="date"
                 required
+                min={fromDate || toDateKey(new Date())}
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -268,7 +344,9 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   return (
-    <RoleGuard allowedRoles={["Developer_E", "Cyber Security_E", "Social Media & Performance Marketing_E"]}>
+    <RoleGuard
+      allowedRoles={["Developer_E", "Cyber Security_E", "Social Media & Performance Marketing_E", "Intern"]}
+    >
       <EmployeeDashboard />
     </RoleGuard>
   );
