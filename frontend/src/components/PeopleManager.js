@@ -223,7 +223,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                   >
                     {roleOptions.map((role) => (
                       <option key={role} value={role}>
-                        {ROLE_LABELS[role]}
+                        {ROLE_LABELS[role] ?? role}
                       </option>
                     ))}
                   </select>

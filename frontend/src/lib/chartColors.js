@@ -27,3 +27,8 @@ export const ROLE_COLORS = {
   Management: CATEGORICAL[5],
   Intern: CATEGORICAL[6],
 };
+
+// Fallback for custom roles added at runtime, which have no fixed color slot.
+export function getRoleColor(role) {
+  return ROLE_COLORS[role] ?? CATEGORICAL[7];
+}

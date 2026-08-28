@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import RoleGuard from "@/components/RoleGuard";
 import { apiFetch } from "@/lib/api";
-import { ROLE_NAMES } from "@/lib/roles";
 
 function ChangePasswordForm() {
   const router = useRouter();
@@ -94,7 +93,7 @@ function ChangePasswordForm() {
 
 export default function ChangePasswordPage() {
   return (
-    <RoleGuard allowedRoles={ROLE_NAMES}>
+    <RoleGuard>
       <ChangePasswordForm />
     </RoleGuard>
   );

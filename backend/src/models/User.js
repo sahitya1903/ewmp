@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { ROLE_NAMES } from "./Role.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -7,7 +6,9 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, required: true, enum: ROLE_NAMES },
+    // No enum here — valid roles are the built-in ROLE_NAMES plus any custom
+    // role added at runtime (see CustomRole); validated in employeeController.
+    role: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
