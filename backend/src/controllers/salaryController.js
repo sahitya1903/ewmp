@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Salary from "../models/Salary.js";
 import SalaryPayment from "../models/SalaryPayment.js";
 import { computeSalaryForUser } from "../lib/salaryCalc.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
 
 function toDTO(salary, payment, user) {
   // Deduction reflects only attendance-based loss (absences, unpaid leave beyond
@@ -36,7 +37,7 @@ export async function listSalaries(req, res) {
     return res.status(400).json({ error: "month and year are required" });
   }
 
-  const isReviewer = ["Accounts_E", "Admin", "Management"].includes(req.user.role);
+  const isReviewer = [...REVIEWER_ROLES, "Accounts_E"].includes(req.user.role);
   const users = isReviewer
     ? await User.find({ isActive: true })
     : await User.find({ _id: req.user.sub });

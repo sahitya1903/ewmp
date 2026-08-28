@@ -8,10 +8,12 @@ import StatTile from "@/components/StatTile";
 import BarList from "@/components/BarList";
 import SalaryTable from "@/components/SalaryTable";
 import MonthYearPicker from "@/components/MonthYearPicker";
-import PeopleManager from "@/components/PeopleManager";
-import { ROLE_COLORS } from "@/lib/chartColors";
+import EmployeesSection from "@/components/EmployeesSection";
+import InternsSection from "@/components/InternsSection";
+import LeaveBalancesPanel from "@/components/LeaveBalancesPanel";
+import { getRoleColor } from "@/lib/chartColors";
 import { apiFetch } from "@/lib/api";
-import { ROLE_NAMES, ROLE_LABELS, EMPLOYEE_ROLE_NAMES } from "@/lib/roles";
+import { ROLE_LABELS } from "@/lib/roles";
 import { currency, MONTH_NAMES } from "@/lib/format";
 import { useMonthYear, useSalaries } from "@/lib/useSalaries";
 
@@ -56,11 +58,13 @@ function Overview() {
   }, []);
 
   const roleRows = (source) =>
-    ROLE_NAMES.filter((role) => source[role]).map((role) => ({
-      label: ROLE_LABELS[role],
-      value: source[role],
-      color: ROLE_COLORS[role],
-    }));
+    Object.keys(source)
+      .filter((role) => source[role])
+      .map((role) => ({
+        label: ROLE_LABELS[role] ?? role,
+        value: source[role],
+        color: getRoleColor(role),
+      }));
 
   return (
     <div>
@@ -74,7 +78,7 @@ function Overview() {
         />
         <StatTile label="Pending leave requests" value={pendingLeave} />
       </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-xs font-medium text-slate-500">Employees by role</h3>
           <BarList data={roleRows(employeesByRole)} />
@@ -84,6 +88,9 @@ function Overview() {
           <BarList data={roleRows(salaryByRole)} formatValue={currency} />
         </div>
       </div>
+
+      <h3 className="mb-3 text-xs font-medium text-slate-500">Paid leave balances</h3>
+      <LeaveBalancesPanel />
     </div>
   );
 }
@@ -152,22 +159,8 @@ function HrConsole() {
           {tab === "overview" && <Overview />}
           {tab === "leave" && <LeaveRequestsPanel />}
           {tab === "salaries" && <Salaries />}
-          {tab === "employees" && (
-            <PeopleManager
-              heading="Employees"
-              addButtonLabel="Add employee"
-              roleOptions={EMPLOYEE_ROLE_NAMES}
-              filterPredicate={(emp) => emp.role !== "Intern"}
-            />
-          )}
-          {tab === "interns" && (
-            <PeopleManager
-              heading="Interns"
-              addButtonLabel="Add intern"
-              roleOptions={["Intern"]}
-              filterPredicate={(emp) => emp.role === "Intern"}
-            />
-          )}
+          {tab === "employees" && <EmployeesSection showRoleManager />}
+          {tab === "interns" && <InternsSection />}
         </div>
       </main>
     </>

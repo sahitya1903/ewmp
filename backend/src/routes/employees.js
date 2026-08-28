@@ -6,16 +6,16 @@ import {
   updateEmployee,
   deleteEmployee,
 } from "../controllers/employeeController.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
 
 const router = Router();
 
 router.use(authGuard);
 
-// Admin needs read access to pick an employee when marking attendance;
-// create/update/delete stay Management-only.
-router.get("/", roleGuard("Admin", "Management"), listEmployees);
-router.post("/", roleGuard("Management"), createEmployee);
-router.put("/:id", roleGuard("Management"), updateEmployee);
-router.delete("/:id", roleGuard("Management"), deleteEmployee);
+// Adding/editing/removing employees is common to Admin and HR (Management).
+router.get("/", roleGuard(...REVIEWER_ROLES), listEmployees);
+router.post("/", roleGuard(...REVIEWER_ROLES), createEmployee);
+router.put("/:id", roleGuard(...REVIEWER_ROLES), updateEmployee);
+router.delete("/:id", roleGuard(...REVIEWER_ROLES), deleteEmployee);
 
 export default router;

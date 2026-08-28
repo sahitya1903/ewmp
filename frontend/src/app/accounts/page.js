@@ -6,6 +6,7 @@ import AccountMenu from "@/components/AccountMenu";
 import StatTile from "@/components/StatTile";
 import SalaryTable from "@/components/SalaryTable";
 import MonthYearPicker from "@/components/MonthYearPicker";
+import LeaveBalancesPanel from "@/components/LeaveBalancesPanel";
 import { currency, MONTH_NAMES } from "@/lib/format";
 import { useMonthYear, useSalaries } from "@/lib/useSalaries";
 import { apiFetch } from "@/lib/api";
@@ -67,6 +68,14 @@ function AccountsConsole() {
               savingId={savingId}
             />
           )}
+
+          <div>
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Paid Leave Balances</h2>
+            <p className="mb-3 text-xs text-slate-500">
+              Cross-check paid-leave usage against deductions above.
+            </p>
+            <LeaveBalancesPanel />
+          </div>
         </div>
       </main>
     </>
