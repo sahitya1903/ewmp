@@ -30,16 +30,18 @@ function previousMonth({ month, year }) {
   return month === 1 ? { month: 12, year: year - 1 } : { month: month - 1, year };
 }
 
-function isWeekend(date) {
-  const day = date.getUTCDay();
-  return day === 0 || day === 6;
-}
+const EMPTY_UPDATE_FORM = {
+  currentProject: "",
+  todaysProgress: "",
+  remainingWork: "",
+  estimatedCompletion: "",
+  additionalWork: "",
+};
 
 function EmployeeDashboard() {
   const [cursor, setCursor] = useState(today());
   const [entriesByDate, setEntriesByDate] = useState({});
   const [calendarLoading, setCalendarLoading] = useState(true);
-  const [joiningDateKey, setJoiningDateKey] = useState(null);
 
   const thisMonth = today();
   const lastMonth = previousMonth(thisMonth);
@@ -60,6 +62,12 @@ function EmployeeDashboard() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [todayUpdate, setTodayUpdate] = useState(null);
+  const [updateFormOpen, setUpdateFormOpen] = useState(false);
+  const [updateForm, setUpdateForm] = useState(EMPTY_UPDATE_FORM);
+  const [updateError, setUpdateError] = useState("");
+  const [updateSaving, setUpdateSaving] = useState(false);
+
   async function loadCalendar() {
     setCalendarLoading(true);
     try {
@@ -79,23 +87,20 @@ function EmployeeDashboard() {
         map[toDateKey(a.date)] = { type: ATTENDANCE_TYPE[a.status] ?? "present", label: a.status };
       }
 
-      // Default to Present for any past/current working day with no explicit
-      // record — an employee is only Absent if an admin marks them so.
-      const todayKey = toDateKey(new Date());
-      const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month, 0)).getUTCDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(Date.UTC(cursor.year, cursor.month - 1, d));
-        const key = toDateKey(date);
-        if (map[key] || key > todayKey || isWeekend(date)) continue;
-        if (joiningDateKey && key < joiningDateKey) continue;
-        map[key] = { type: "present", label: "Present" };
-      }
-
       setEntriesByDate(map);
     } catch {
       setEntriesByDate({});
     } finally {
       setCalendarLoading(false);
+    }
+  }
+
+  async function loadTodayUpdate() {
+    try {
+      const data = await apiFetch("/daily-work-updates/today");
+      setTodayUpdate(data.update);
+    } catch {
+      setTodayUpdate(null);
     }
   }
 
@@ -115,19 +120,49 @@ function EmployeeDashboard() {
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor, joiningDateKey]);
+  }, [cursor]);
 
   useEffect(() => {
     loadLeaveRequests();
+    loadTodayUpdate();
     apiFetch("/leave-requests/balance")
       .then(setLeaveBalance)
       .catch(() => setLeaveBalance(null));
-    apiFetch("/auth/me")
-      .then((data) => {
-        if (data.user.joiningDate) setJoiningDateKey(toDateKey(data.user.joiningDate));
-      })
-      .catch(() => {});
   }, []);
+
+  function openUpdateForm() {
+    setUpdateForm(
+      todayUpdate
+        ? {
+            currentProject: todayUpdate.currentProject,
+            todaysProgress: todayUpdate.todaysProgress,
+            remainingWork: todayUpdate.remainingWork,
+            estimatedCompletion: todayUpdate.estimatedCompletion ? todayUpdate.estimatedCompletion.slice(0, 10) : "",
+            additionalWork: todayUpdate.additionalWork ?? "",
+          }
+        : EMPTY_UPDATE_FORM
+    );
+    setUpdateError("");
+    setUpdateFormOpen(true);
+  }
+
+  async function handleUpdateSubmit(e) {
+    e.preventDefault();
+    setUpdateSaving(true);
+    setUpdateError("");
+    try {
+      await apiFetch("/daily-work-updates", {
+        method: "POST",
+        body: JSON.stringify(updateForm),
+      });
+      setUpdateFormOpen(false);
+      await loadTodayUpdate();
+    } catch (err) {
+      setUpdateError(err.message);
+    } finally {
+      setUpdateSaving(false);
+    }
+  }
 
   function prevMonth() {
     setCursor((c) => (c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 }));
@@ -170,9 +205,28 @@ function EmployeeDashboard() {
         <div className="mx-auto max-w-5xl">
           <h1 className="text-xl font-semibold text-slate-900">Employee Dashboard</h1>
           <p className="mt-1 mb-6 text-sm text-slate-600">
-            Daily work updates and notifications are coming in a later phase — this page currently
-            covers leave and the attendance/holiday calendar.
+            Notifications are coming in a later phase — this page currently covers your daily work
+            update, leave, and the attendance/holiday calendar.
           </p>
+
+          <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
+              {todayUpdate ? (
+                <p className="mt-1 text-sm text-slate-600">
+                  <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.currentProject}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
+              )}
+            </div>
+            <button
+              onClick={openUpdateForm}
+              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+            >
+              {todayUpdate ? "Edit update" : "Submit update"}
+            </button>
+          </div>
 
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {leaveBalance && (
@@ -337,6 +391,80 @@ function EmployeeDashboard() {
             </form>
           </div>
         )}
+
+        {updateFormOpen && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
+            <form
+              onSubmit={handleUpdateSubmit}
+              className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">Today&apos;s work update</h2>
+
+              <label className="mb-1 block text-xs font-medium text-slate-700">Current project</label>
+              <input
+                required
+                value={updateForm.currentProject}
+                onChange={(e) => setUpdateForm({ ...updateForm, currentProject: e.target.value })}
+                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              />
+
+              <label className="mb-1 block text-xs font-medium text-slate-700">Today&apos;s progress</label>
+              <textarea
+                required
+                value={updateForm.todaysProgress}
+                onChange={(e) => setUpdateForm({ ...updateForm, todaysProgress: e.target.value })}
+                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                rows={2}
+              />
+
+              <label className="mb-1 block text-xs font-medium text-slate-700">Remaining work</label>
+              <textarea
+                required
+                value={updateForm.remainingWork}
+                onChange={(e) => setUpdateForm({ ...updateForm, remainingWork: e.target.value })}
+                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                rows={2}
+              />
+
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                Estimated completion (optional)
+              </label>
+              <input
+                type="date"
+                value={updateForm.estimatedCompletion}
+                onChange={(e) => setUpdateForm({ ...updateForm, estimatedCompletion: e.target.value })}
+                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              />
+
+              <label className="mb-1 block text-xs font-medium text-slate-700">Additional work (optional)</label>
+              <textarea
+                value={updateForm.additionalWork}
+                onChange={(e) => setUpdateForm({ ...updateForm, additionalWork: e.target.value })}
+                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                rows={2}
+              />
+
+              {updateError && <p className="mb-3 text-sm text-red-600">{updateError}</p>}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUpdateFormOpen(false)}
+                  className="rounded px-4 py-2 text-sm text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateSaving}
+                  className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {updateSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </main>
     </>
   );
@@ -344,9 +472,7 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   return (
-    <RoleGuard
-      allowedRoles={["Developer_E", "Cyber Security_E", "Social Media & Performance Marketing_E", "Intern"]}
-    >
+    <RoleGuard deniedRoles={["Accounts_E", "Admin", "Management"]}>
       <EmployeeDashboard />
     </RoleGuard>
   );
