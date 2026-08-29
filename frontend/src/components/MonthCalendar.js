@@ -35,10 +35,15 @@ const ENTRY_STYLES = {
   leave: "border-blue-300 bg-blue-50 text-blue-800",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   absent: "border-red-300 bg-red-50 text-red-800",
+  weeklyOff: "border-slate-300 bg-slate-100 text-slate-600",
 };
+
+const WEEKLY_OFF_ENTRY = { type: "weeklyOff", label: "Weekly Off" };
+const WEEKLY_OFF_DAY = 1; // Monday — matches backend/src/lib/workingDays.js's isWeeklyOff
 
 export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDate = {}, legend }) {
   const weeks = buildMonthGrid(year, month);
+  const fullLegend = legend ? [...legend, WEEKLY_OFF_ENTRY] : legend;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -75,7 +80,8 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
           week.map((day, di) => {
             if (day === null) return <div key={`${wi}-${di}`} />;
             const key = dateKey(year, month, day);
-            const entry = entriesByDate[key];
+            const isWeeklyOff = new Date(Date.UTC(year, month - 1, day)).getUTCDay() === WEEKLY_OFF_DAY;
+            const entry = entriesByDate[key] ?? (isWeeklyOff ? WEEKLY_OFF_ENTRY : undefined);
             return (
               <div
                 key={key}
@@ -91,9 +97,9 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
         )}
       </div>
 
-      {legend && (
+      {fullLegend && (
         <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-500">
-          {legend.map((item) => (
+          {fullLegend.map((item) => (
             <span key={item.type} className="flex items-center gap-1">
               <span className={`h-2 w-2 rounded-full border ${ENTRY_STYLES[item.type]}`} />
               {item.label}
