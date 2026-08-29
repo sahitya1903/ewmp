@@ -1,7 +1,19 @@
 import User from "../models/User.js";
 import EmployeeProfile from "../models/EmployeeProfile.js";
+import Attendance from "../models/Attendance.js";
+import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
+import LeaveRequest from "../models/LeaveRequest.js";
+import Salary from "../models/Salary.js";
+import SalaryPayment from "../models/SalaryPayment.js";
+import Notification from "../models/Notification.js";
 import { ROLE_NAMES } from "../models/Role.js";
+import CustomRole from "../models/CustomRole.js";
 import { hashPassword } from "../lib/auth.js";
+
+async function isValidRole(role) {
+  if (ROLE_NAMES.includes(role)) return true;
+  return Boolean(await CustomRole.exists({ name: role }));
+}
 
 async function generateEmployeeId(role) {
   const prefix = role === "Intern" ? "INT" : "EMP";
@@ -47,7 +59,7 @@ export async function createEmployee(req, res) {
   if (!name || !email || !password || !role || !phone || monthlySalary == null || !joiningDate) {
     return res.status(400).json({ error: "All fields are required" });
   }
-  if (!ROLE_NAMES.includes(role)) {
+  if (!(await isValidRole(role))) {
     return res.status(400).json({ error: "Invalid role" });
   }
   if (password.length < 8) {
@@ -89,7 +101,7 @@ export async function updateEmployee(req, res) {
   const user = await User.findById(id);
   if (!user) return res.status(404).json({ error: "Employee not found" });
 
-  if (role !== undefined && !ROLE_NAMES.includes(role)) {
+  if (role !== undefined && !(await isValidRole(role))) {
     return res.status(400).json({ error: "Invalid role" });
   }
   if (password && password.length < 8) {
@@ -134,7 +146,18 @@ export async function deleteEmployee(req, res) {
   const user = await User.findById(id);
   if (!user) return res.status(404).json({ error: "Employee not found" });
 
-  await EmployeeProfile.deleteOne({ user: user._id });
+  // Clean up everything tied to this user — leaving orphaned records behind
+  // would keep inflating attendance/leave counts on dashboards that aggregate
+  // across all records without checking the user still exists.
+  await Promise.all([
+    EmployeeProfile.deleteOne({ user: user._id }),
+    Attendance.deleteMany({ user: user._id }),
+    DailyWorkUpdate.deleteMany({ user: user._id }),
+    LeaveRequest.deleteMany({ user: user._id }),
+    Salary.deleteMany({ user: user._id }),
+    SalaryPayment.deleteMany({ user: user._id }),
+    Notification.deleteMany({ user: user._id }),
+  ]);
   await user.deleteOne();
 
   res.json({ ok: true });
