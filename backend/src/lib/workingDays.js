@@ -1,8 +1,10 @@
 import Holiday from "../models/Holiday.js";
 
-export function isWeekend(date) {
+// The company's only weekly off is Monday — everything else (including
+// Saturday/Sunday) is a working day unless it's a declared Holiday.
+export function isWeeklyOff(date) {
   const day = date.getUTCDay();
-  return day === 0 || day === 6;
+  return day === 1;
 }
 
 function dateKey(date) {
@@ -15,7 +17,7 @@ export async function getHolidaySet(start, end) {
 }
 
 export function isWorkingDay(date, holidaySet) {
-  return !isWeekend(date) && !holidaySet.has(dateKey(date));
+  return !isWeeklyOff(date) && !holidaySet.has(dateKey(date));
 }
 
 export function getDaysInMonth(year, month) {
