@@ -1,8 +1,10 @@
 import LeaveRequest from "../models/LeaveRequest.js";
 import Attendance from "../models/Attendance.js";
+import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import User from "../models/User.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
 
 function toDateOnly(value) {
   const date = new Date(value);
@@ -55,7 +57,7 @@ export async function applyLeave(req, res) {
 }
 
 export async function listLeaveRequests(req, res) {
-  const isReviewer = ["Admin", "Management"].includes(req.user.role);
+  const isReviewer = REVIEWER_ROLES.includes(req.user.role);
   const filter = isReviewer ? {} : { user: req.user.sub };
 
   if (req.query.status) {
@@ -112,6 +114,13 @@ export async function reviewLeaveRequest(req, res) {
         )
       )
     );
+
+    // A day someone already submitted a work update for might now be approved
+    // leave (e.g. the request was filed and approved after the fact) — clear
+    // those updates so the day doesn't show both "on leave" and "worked".
+    if (workingDates.length > 0) {
+      await DailyWorkUpdate.deleteMany({ user: leaveRequest.user, date: { $in: workingDates } });
+    }
   }
 
   res.json({ leaveRequest });
@@ -123,7 +132,7 @@ export async function getLeaveBalanceForUser(req, res) {
   const year = Number(req.query.year) || defaultYear;
 
   let userId = req.user.sub;
-  if (["Admin", "Management"].includes(req.user.role) && req.query.userId) {
+  if (REVIEWER_ROLES.includes(req.user.role) && req.query.userId) {
     userId = req.query.userId;
   }
 

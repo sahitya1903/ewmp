@@ -1,4 +1,7 @@
 import Attendance from "../models/Attendance.js";
+import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
+import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 
 export async function markAttendance(req, res) {
   const { userId, date, status } = req.body;
@@ -13,11 +16,22 @@ export async function markAttendance(req, res) {
   const day = new Date(date);
   day.setUTCHours(0, 0, 0, 0);
 
+  const holidaySet = await getHolidaySet(day, new Date(day.getTime() + 86400000));
+  if (!isWorkingDay(day, holidaySet)) {
+    return res.status(400).json({ error: "That date is a weekly off or holiday — attendance isn't tracked for it" });
+  }
+
   const attendance = await Attendance.findOneAndUpdate(
     { user: userId, date: day },
     { $set: { status, markedBy: req.user.sub }, $unset: { leaveRequest: "" } },
     { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
+
+  // Marking someone Absent contradicts any work update they already submitted
+  // for that day — clear it so the day doesn't show both "absent" and "worked".
+  if (status === "Absent") {
+    await DailyWorkUpdate.deleteOne({ user: userId, date: day });
+  }
 
   res.json({ attendance });
 }
@@ -27,7 +41,7 @@ export async function listAttendance(req, res) {
 
   const filter = {};
 
-  if (!["Admin", "Management"].includes(req.user.role)) {
+  if (!REVIEWER_ROLES.includes(req.user.role)) {
     filter.user = req.user.sub;
   } else if (userId) {
     filter.user = userId;
