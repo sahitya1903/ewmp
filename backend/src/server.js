@@ -10,6 +10,7 @@ import holidayRoutes from "./routes/holidays.js";
 import salaryRoutes from "./routes/salaries.js";
 import dailyWorkUpdateRoutes from "./routes/dailyWorkUpdates.js";
 import roleRoutes from "./routes/roles.js";
+import noticeRoutes from "./routes/notices.js";
 
 const PORT = process.env.PORT || 4000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
@@ -29,6 +30,7 @@ app.use("/api/holidays", holidayRoutes);
 app.use("/api/salaries", salaryRoutes);
 app.use("/api/daily-work-updates", dailyWorkUpdateRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/notices", noticeRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

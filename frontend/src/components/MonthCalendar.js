@@ -35,6 +35,7 @@ const ENTRY_STYLES = {
   leave: "border-blue-300 bg-blue-50 text-blue-800",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   absent: "border-red-300 bg-red-50 text-red-800",
+  notice: "border-violet-300 bg-violet-50 text-violet-800",
   weeklyOff: "border-slate-300 bg-slate-100 text-slate-600",
 };
 
@@ -85,12 +86,15 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
             return (
               <div
                 key={key}
-                className={`flex h-16 flex-col items-start rounded border p-1 text-left text-xs ${
+                title={entry?.label}
+                className={`flex h-16 min-w-0 flex-col items-start overflow-hidden rounded border p-1 text-left text-xs ${
                   entry ? ENTRY_STYLES[entry.type] : "border-slate-100"
                 }`}
               >
                 <span className="font-medium text-slate-700">{day}</span>
-                {entry && <span className="mt-auto truncate text-[10px]">{entry.label}</span>}
+                {entry && (
+                  <span className="mt-auto block w-full truncate text-[10px] leading-tight">{entry.label}</span>
+                )}
               </div>
             );
           })
