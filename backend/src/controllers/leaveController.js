@@ -23,9 +23,8 @@ function eachDate(from, to) {
   return dates;
 }
 
-function currentMonthYear() {
-  const now = new Date();
-  return { month: now.getMonth() + 1, year: now.getFullYear() };
+function currentYear() {
+  return new Date().getFullYear();
 }
 
 export async function applyLeave(req, res) {
@@ -127,29 +126,25 @@ export async function reviewLeaveRequest(req, res) {
 }
 
 export async function getLeaveBalanceForUser(req, res) {
-  const { month: defaultMonth, year: defaultYear } = currentMonthYear();
-  const month = Number(req.query.month) || defaultMonth;
-  const year = Number(req.query.year) || defaultYear;
+  const year = Number(req.query.year) || currentYear();
 
   let userId = req.user.sub;
   if (REVIEWER_ROLES.includes(req.user.role) && req.query.userId) {
     userId = req.query.userId;
   }
 
-  const balance = await getLeaveBalance(userId, year, month);
-  res.json({ ...balance, month, year });
+  const balance = await getLeaveBalance(userId, year);
+  res.json({ ...balance, year });
 }
 
 export async function listLeaveBalances(req, res) {
-  const { month: defaultMonth, year: defaultYear } = currentMonthYear();
-  const month = Number(req.query.month) || defaultMonth;
-  const year = Number(req.query.year) || defaultYear;
+  const year = Number(req.query.year) || currentYear();
 
   const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
 
   const balances = await Promise.all(
     users.map(async (user) => {
-      const balance = await getLeaveBalance(user._id, year, month);
+      const balance = await getLeaveBalance(user._id, year);
       return {
         user: { id: user._id, employeeId: user.employeeId, name: user.name, role: user.role },
         ...balance,
@@ -157,5 +152,5 @@ export async function listLeaveBalances(req, res) {
     })
   );
 
-  res.json({ balances, month, year });
+  res.json({ balances, year });
 }

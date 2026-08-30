@@ -26,8 +26,10 @@ export default function LeaveBalancesPanel() {
             <thead className="text-slate-600">
               <tr>
                 <th className="py-2 pr-4 font-medium">Employee</th>
-                <th className="py-2 pr-4 font-medium">Paid leave used</th>
+                <th className="py-2 pr-4 font-medium">Accrued so far</th>
+                <th className="py-2 pr-4 font-medium">Used</th>
                 <th className="py-2 pr-4 font-medium">Remaining</th>
+                <th className="py-2 pr-4 font-medium">Annual quota</th>
               </tr>
             </thead>
             <tbody>
@@ -36,15 +38,15 @@ export default function LeaveBalancesPanel() {
                   <td className="py-2 pr-4">
                     {b.user.name} <span className="text-slate-400">({b.user.employeeId})</span>
                   </td>
-                  <td className="py-2 pr-4">
-                    {b.used} / {b.quota}
-                  </td>
+                  <td className="py-2 pr-4">{b.accrued}</td>
+                  <td className="py-2 pr-4">{b.used}</td>
                   <td className="py-2 pr-4">{b.remaining}</td>
+                  <td className="py-2 pr-4 text-slate-500">{b.quota} / year</td>
                 </tr>
               ))}
               {balances.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-slate-500">
+                  <td colSpan={5} className="py-6 text-center text-slate-500">
                     No employees found.
                   </td>
                 </tr>
