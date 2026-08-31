@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { authGuard, roleGuard } from "../middleware/authGuard.js";
-import { listSalaries, updateCredited } from "../controllers/salaryController.js";
+import { listSalaries, listSalaryHistory, updateCredited } from "../controllers/salaryController.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
 
 const router = Router();
 
 router.use(authGuard);
 
 router.get("/", listSalaries);
-router.patch("/:id/credit", roleGuard("Accounts_E"), updateCredited);
+// Viewing and recording salary payments is common to Admin, HR, and Accounts.
+router.get("/history", roleGuard(...REVIEWER_ROLES, "Accounts_E"), listSalaryHistory);
+router.patch("/:id/credit", roleGuard(...REVIEWER_ROLES, "Accounts_E"), updateCredited);
 
 export default router;
