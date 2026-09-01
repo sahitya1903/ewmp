@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import AccountMenu from "@/components/AccountMenu";
 import MonthCalendar, { toDateKey } from "@/components/MonthCalendar";
+import NoticeBoard from "@/components/NoticeBoard";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
 import { currency, MONTH_NAMES } from "@/lib/format";
@@ -45,9 +46,7 @@ function EmployeeDashboard() {
 
   const thisMonth = today();
   const lastMonth = previousMonth(thisMonth);
-  const { salaries: currentMonthSalaries } = useSalaries(thisMonth.month, thisMonth.year);
   const { salaries: lastMonthSalaries } = useSalaries(lastMonth.month, lastMonth.year);
-  const mySalaryThisMonth = currentMonthSalaries[0];
   const mySalaryLastMonth = lastMonthSalaries[0];
 
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -63,6 +62,7 @@ function EmployeeDashboard() {
   const [saving, setSaving] = useState(false);
 
   const [todayUpdate, setTodayUpdate] = useState(null);
+  const [todayAttendance, setTodayAttendance] = useState(null);
   const [updateFormOpen, setUpdateFormOpen] = useState(false);
   const [updateForm, setUpdateForm] = useState(EMPTY_UPDATE_FORM);
   const [updateError, setUpdateError] = useState("");
@@ -71,9 +71,10 @@ function EmployeeDashboard() {
   async function loadCalendar() {
     setCalendarLoading(true);
     try {
-      const [holidaysRes, attendanceRes] = await Promise.all([
+      const [holidaysRes, attendanceRes, noticesRes] = await Promise.all([
         apiFetch(`/holidays?year=${cursor.year}`),
         apiFetch(`/attendance?month=${cursor.month}&year=${cursor.year}`),
+        apiFetch(`/notices?year=${cursor.year}`),
       ]);
 
       const map = {};
@@ -81,6 +82,12 @@ function EmployeeDashboard() {
         const key = toDateKey(h.date);
         if (new Date(h.date).getUTCMonth() + 1 === cursor.month) {
           map[key] = { type: "holiday", label: h.name };
+        }
+      }
+      for (const n of noticesRes.notices) {
+        const key = toDateKey(n.date);
+        if (new Date(n.date).getUTCMonth() + 1 === cursor.month && !map[key]) {
+          map[key] = { type: "notice", label: n.title };
         }
       }
       for (const a of attendanceRes.attendance) {
@@ -101,6 +108,22 @@ function EmployeeDashboard() {
       setTodayUpdate(data.update);
     } catch {
       setTodayUpdate(null);
+    }
+  }
+
+  // If an admin has already marked today's attendance directly, the employee
+  // doesn't need to be nagged for a work update — Absent/Leave can't take one
+  // anyway (the API rejects it), and an admin-marked Present already accounts
+  // for the day.
+  async function loadTodayAttendance() {
+    try {
+      const { year, month } = today();
+      const data = await apiFetch(`/attendance?month=${month}&year=${year}`);
+      const todayKey = toDateKey(new Date());
+      const record = data.attendance.find((a) => toDateKey(a.date) === todayKey);
+      setTodayAttendance(record?.status ?? null);
+    } catch {
+      setTodayAttendance(null);
     }
   }
 
@@ -125,6 +148,7 @@ function EmployeeDashboard() {
   useEffect(() => {
     loadLeaveRequests();
     loadTodayUpdate();
+    loadTodayAttendance();
     apiFetch("/leave-requests/balance")
       .then(setLeaveBalance)
       .catch(() => setLeaveBalance(null));
@@ -157,6 +181,7 @@ function EmployeeDashboard() {
       });
       setUpdateFormOpen(false);
       await loadTodayUpdate();
+      await loadTodayAttendance();
     } catch (err) {
       setUpdateError(err.message);
     } finally {
@@ -206,7 +231,7 @@ function EmployeeDashboard() {
           <h1 className="text-xl font-semibold text-slate-900">Employee Dashboard</h1>
           <p className="mt-1 mb-6 text-sm text-slate-600">
             Notifications are coming in a later phase — this page currently covers your daily work
-            update, leave, and the attendance/holiday calendar.
+            update, leave, company notices, and the attendance/holiday calendar.
           </p>
 
           <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4">
@@ -216,24 +241,36 @@ function EmployeeDashboard() {
                 <p className="mt-1 text-sm text-slate-600">
                   <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.currentProject}
                 </p>
+              ) : todayAttendance === "Absent" ? (
+                <p className="mt-1 text-sm text-slate-600">
+                  Marked <span className="font-medium text-red-700">Absent</span> today by Admin — no work update needed.
+                </p>
+              ) : todayAttendance === "Leave" ? (
+                <p className="mt-1 text-sm text-slate-600">You&apos;re on approved leave today — no work update needed.</p>
+              ) : todayAttendance === "Present" ? (
+                <p className="mt-1 text-sm text-slate-600">
+                  Marked <span className="font-medium text-emerald-700">Present</span> today by Admin — a work update is optional.
+                </p>
               ) : (
                 <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
               )}
             </div>
-            <button
-              onClick={openUpdateForm}
-              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              {todayUpdate ? "Edit update" : "Submit update"}
-            </button>
+            {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
+              <button
+                onClick={openUpdateForm}
+                className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+              >
+                {todayUpdate ? "Edit update" : "Submit update"}
+              </button>
+            )}
           </div>
 
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {leaveBalance && (
               <StatTile
                 label="Paid leaves remaining"
-                value={`${leaveBalance.remaining} / ${leaveBalance.quota}`}
-                sub="This month"
+                value={`${leaveBalance.remaining}`}
+                sub={`${leaveBalance.accrued} accrued of ${leaveBalance.quota}/year`}
               />
             )}
             {mySalaryLastMonth && (
@@ -244,17 +281,6 @@ function EmployeeDashboard() {
                   mySalaryLastMonth.credited
                     ? `Credited ${new Date(mySalaryLastMonth.creditedDate).toLocaleDateString()}`
                     : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
-                }
-              />
-            )}
-            {mySalaryThisMonth && (
-              <StatTile
-                label="This month's salary due"
-                value={currency(mySalaryThisMonth.salaryPayable)}
-                sub={
-                  mySalaryThisMonth.deduction > 0
-                    ? `${currency(mySalaryThisMonth.deduction)} deducted so far`
-                    : `${MONTH_NAMES[thisMonth.month - 1]} ${thisMonth.year}`
                 }
               />
             )}
@@ -324,12 +350,18 @@ function EmployeeDashboard() {
                 entriesByDate={entriesByDate}
                 legend={[
                   { type: "holiday", label: "Holiday" },
+                  { type: "notice", label: "Notice / Meeting" },
                   { type: "present", label: "Present" },
                   { type: "absent", label: "Absent" },
                   { type: "leave", label: "Leave" },
                 ]}
               />
             </div>
+          </div>
+
+          <div className="mt-6">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
+            <NoticeBoard />
           </div>
         </div>
 
