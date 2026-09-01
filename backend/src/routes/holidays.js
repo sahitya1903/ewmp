@@ -7,7 +7,8 @@ const router = Router();
 router.use(authGuard);
 
 router.get("/", listHolidays);
-router.post("/", roleGuard("Admin"), createHoliday);
-router.delete("/:id", roleGuard("Admin"), deleteHoliday);
+// Marking holidays is common to Admin and HR (Management).
+router.post("/", roleGuard("Admin", "Management"), createHoliday);
+router.delete("/:id", roleGuard("Admin", "Management"), deleteHoliday);
 
 export default router;
