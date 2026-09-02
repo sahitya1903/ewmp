@@ -33,11 +33,95 @@ npm run dev --prefix backend    # http://localhost:4000
 npm run dev --prefix frontend   # http://localhost:3000
 ```
 
-Log in at `http://localhost:3000/login` — seeded test accounts are listed in `backend/scripts/seed.mjs` (password `Test@1234` for all).
+Log in at `http://localhost:3000/login` — seeded test accounts are listed at the end of `backend/scripts/seed.mjs` (password `Test@1234` for all). `npm run seed` wipes and reloads all collections, so re-run it any time to reset the demo.
+
+## Roles
+
+One built-in role per person, set by HR/Admin. `Admin` and `Management` (HR) are the two "reviewer" roles that see and act on everyone's data.
+
+| Role | Home page | Can do |
+|---|---|---|
+| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave, record salary payments, add/remove employees |
+| `Management` (HR) | `/hr` | Everything Admin can except marking attendance; also manages custom roles |
+| `Accounts_E` | `/accounts` | Record salary payments, view leave balances |
+| `Developer_E`, `Cyber Security_E`, `Social Media & Performance Marketing_E`, `Intern` | `/dashboard` | Submit daily work update, apply for leave, view own calendar/salary/notifications |
+
+HR/Admin can also add extra custom role names (`CustomRole`); anyone assigned one lands on `/dashboard`.
+
+## Modules
+
+- **Auth** — credential login (JWT + bcrypt), change password, forgot/reset password (reset links are logged to the console; no email provider wired up).
+- **Employees & roles** — HR/Admin CRUD over people and their profile (phone, monthly salary, joining date). Deleting a person cascades to all their attendance/leave/salary/notification records.
+- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. Reviewers can request a follow-up with a note.
+- **Leave & attendance** — apply for leave (today or later), HR/Admin approve/reject, Admin marks Present/Absent directly. Approved leave writes `Leave` attendance rows. Paid leave **accrues 1.75 days per completed month (21/year)**, capped annually; days beyond the accrued balance are unpaid.
+- **Holidays & calendar** — HR/Admin maintain the holiday list; the shared `MonthCalendar` overlays holidays, notices, and (on the employee view) that person's attendance. The weekly off is Monday.
+- **Salary** — `salaryPayable` is derived from attendance: `dailySalary × (days in month − absent − unpaid-leave − pre-joining days)`. HR/Admin/Accounts record the amount actually credited plus an optional remark; edits keep the original crediter and stamp the reviser, and every credit/revision is logged. The **Salary History** tab shows the whole team's credit activity for a month.
+- **Notices & meetings** — Admin posts a dated notice or meeting link; it shows on every calendar and in a "Notices & Meetings" panel, and fans an announcement notification out to everyone.
+- **Notifications** — a bell in the account bar with an unread count and feed. Emitted on leave decisions, salary credits/revisions, new/edited notices, and follow-up requests. Meeting reminders for notices landing today/tomorrow are generated lazily when the feed is fetched (there's no scheduler).
+
+## API reference
+
+All routes are under `/api`. Everything except the four public auth endpoints requires the `token` cookie. "Reviewer" = `Admin` + `Management`.
+
+| Method & path | Who | Purpose |
+|---|---|---|
+| `POST /auth/login` · `POST /auth/logout` | public | start / end a session |
+| `GET /auth/me` | any | current user + role |
+| `POST /auth/change-password` | any | change own password |
+| `POST /auth/forgot-password` · `POST /auth/reset-password` | public | password reset by emailed/logged token |
+| `GET /employees` · `POST /employees` · `PUT /employees/:id` · `DELETE /employees/:id` | reviewer | employee CRUD |
+| `GET /roles` | any | built-in + custom role names |
+| `POST /roles` | reviewer | add a custom role |
+| `POST /daily-work-updates` · `GET /daily-work-updates/today` | any | submit / read today's update |
+| `GET /daily-work-updates/today-status` | Admin, Management | who has submitted today |
+| `POST /daily-work-updates/:id/follow-up` | Admin, Management | request a follow-up (notifies the employee) |
+| `POST /leave-requests` · `GET /leave-requests` | any | apply / list (own, or all for reviewers) |
+| `GET /leave-requests/balance` | any | own accrued/used/remaining for a year |
+| `GET /leave-requests/balances` | reviewer, Accounts_E | everyone's balances |
+| `PATCH /leave-requests/:id/status` | reviewer | approve / reject (notifies the employee) |
+| `GET /attendance` | any | attendance rows (own, or all for reviewers) |
+| `POST /attendance/mark` | Admin | mark a person Present/Absent for a working day |
+| `GET /holidays` | any | holidays for a year |
+| `POST /holidays` · `DELETE /holidays/:id` | Admin, Management | add / remove a holiday |
+| `GET /salaries` | any (own) / reviewer + Accounts_E (all) | computed salary rows for a month |
+| `GET /salaries/history` | reviewer, Accounts_E | combined credit history for a month |
+| `PATCH /salaries/:id/credit` | reviewer, Accounts_E | record/revise a payment (notifies the employee) |
+| `GET /notices` | any | notices (optionally filtered by year) |
+| `POST /notices` · `PATCH /notices/:id` · `DELETE /notices/:id` | Admin | manage notices (create/edit fans out notifications) |
+| `GET /notifications` | any | own feed + `unreadCount` (also materialises due reminders) |
+| `PATCH /notifications/:id/read` · `POST /notifications/read-all` | any | mark read |
+
+## Data model
+
+MongoDB collections (all in `backend/src/models/`):
+
+`User` · `EmployeeProfile` · `CustomRole` · `DailyWorkUpdate` · `LeaveRequest` · `Attendance` · `Holiday` · `Salary` · `SalaryPayment` · `Notice` · `Notification`
+
+`Salary` rows are recomputed from attendance on every read (`computeSalaryForUser`), so they're a cache, not a source of truth. `SalaryPayment` holds the human-entered "what we actually paid" plus its edit history.
+
+## Project layout
+
+```
+backend/src/
+  server.js          route registration + error handler
+  routes/            one file per resource, wires guards to controllers
+  controllers/       request handlers
+  models/            Mongoose schemas
+  lib/               auth, db, dates, roles, notify/reminders,
+                     workingDays, leavePolicy, salaryCalc
+  middleware/        authGuard (cookie → req.user), roleGuard
+  scripts/seed.mjs   wipe + reload demo data
+
+frontend/src/
+  app/               one folder per route (login, dashboard, admin, hr, accounts, …)
+  components/         shared UI (SalaryTable, MonthCalendar, NotificationBell, …)
+  lib/               api fetch wrapper, format/month helpers, hooks (useSalaries, useRoles)
+  middleware.js       redirects unauthenticated users away from protected prefixes
+```
 
 ## How auth flows
 
 1. `frontend` posts credentials to `backend`'s `POST /api/auth/login`, `credentials: "include"`.
 2. `backend` verifies the password, signs a JWT, and sets it as an httpOnly cookie.
-3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/hr` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
+3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/hr`, `/change-password` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
 4. Each protected page wraps its content in `<RoleGuard allowedRoles={[...]}>`, which calls `backend`'s `GET /api/auth/me` client-side to confirm the actual role and redirects to `/login` if it doesn't match.
