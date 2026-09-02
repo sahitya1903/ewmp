@@ -7,6 +7,14 @@ export const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+export function formatDate(value) {
+  return new Date(value).toLocaleDateString();
+}
+
+export function formatDateLong(value) {
+  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function timeAgo(value) {
   const secs = Math.round((Date.now() - new Date(value).getTime()) / 1000);
   if (secs < 60) return "just now";

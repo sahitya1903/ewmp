@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-}
+import { formatDateLong } from "@/lib/format";
 
 // Read-only list of Admin-posted notices and meeting links, newest first.
 // Shown on every employee's account.
@@ -38,7 +35,7 @@ export default function NoticeBoard() {
         <li key={n._id} className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-start justify-between gap-3">
             <h3 className="text-sm font-semibold text-slate-900">{n.title}</h3>
-            <span className="shrink-0 text-xs text-slate-500">{formatDate(n.date)}</span>
+            <span className="shrink-0 text-xs text-slate-500">{formatDateLong(n.date)}</span>
           </div>
           {n.body && <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{n.body}</p>}
           {n.link && (

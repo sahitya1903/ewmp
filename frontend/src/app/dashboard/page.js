@@ -7,7 +7,7 @@ import MonthCalendar, { toDateKey } from "@/components/MonthCalendar";
 import NoticeBoard from "@/components/NoticeBoard";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
-import { currency, MONTH_NAMES } from "@/lib/format";
+import { currency, formatDate, MONTH_NAMES } from "@/lib/format";
 import { thisMonth, addMonths } from "@/lib/month";
 import { useSalaries } from "@/lib/useSalaries";
 
@@ -18,10 +18,6 @@ const STATUS_STYLES = {
 };
 
 const ATTENDANCE_TYPE = { Present: "present", Absent: "absent", Leave: "leave" };
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString();
-}
 
 const EMPTY_UPDATE_FORM = {
   currentProject: "",

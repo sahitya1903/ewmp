@@ -2,16 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 
 const STATUS_STYLES = {
   Pending: "bg-amber-50 text-amber-800 border-amber-300",
   Approved: "bg-emerald-50 text-emerald-800 border-emerald-300",
   Rejected: "bg-red-50 text-red-800 border-red-300",
 };
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString();
-}
 
 export default function LeaveRequestsPanel() {
   const [leaveRequests, setLeaveRequests] = useState([]);
