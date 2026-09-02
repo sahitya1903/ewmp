@@ -4,7 +4,12 @@ import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import User from "../models/User.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
+import { notify } from "../lib/notify.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
+
+function fmtDay(value) {
+  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
 
 function toDateOnly(value) {
   const date = new Date(value);
@@ -121,6 +126,16 @@ export async function reviewLeaveRequest(req, res) {
       await DailyWorkUpdate.deleteMany({ user: leaveRequest.user, date: { $in: workingDates } });
     }
   }
+
+  const range =
+    fmtDay(leaveRequest.fromDate) === fmtDay(leaveRequest.toDate)
+      ? fmtDay(leaveRequest.fromDate)
+      : `${fmtDay(leaveRequest.fromDate)} – ${fmtDay(leaveRequest.toDate)}`;
+  await notify(
+    leaveRequest.user,
+    "leave_status",
+    `Your leave request (${range}) was ${status.toLowerCase()}.`
+  );
 
   res.json({ leaveRequest });
 }

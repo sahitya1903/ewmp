@@ -2,10 +2,15 @@ import User from "../models/User.js";
 import Salary from "../models/Salary.js";
 import SalaryPayment from "../models/SalaryPayment.js";
 import { computeSalaryForUser } from "../lib/salaryCalc.js";
+import { notify } from "../lib/notify.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
 
 function fmtUser(u) {
   return u && u._id ? { id: u._id, name: u.name, role: u.role } : null;
+}
+
+function inr(n) {
+  return `₹${Number(n).toLocaleString("en-IN")}`;
 }
 
 // The credit history shown behind the "History" button. Prefer the recorded
@@ -199,6 +204,17 @@ export async function updateCredited(req, res) {
     .populate("creditedBy", "name role")
     .populate("revisedBy", "name role")
     .populate("history.by", "name role");
+
+  const period = new Date(Date.UTC(salary.year, salary.month - 1, 1)).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+  let message = null;
+  if (action === "credited") message = `Your salary for ${period} (${inr(payment.amountCredited)}) has been credited.`;
+  else if (action === "revised") message = `Your credited salary for ${period} was revised to ${inr(payment.amountCredited)}.`;
+  else if (action === "uncredited") message = `Your salary credit for ${period} was reverted.`;
+  if (message) await notify(salary.user, "salary_credited", message);
+
   res.json({
     credited: payment.credited,
     creditedDate: payment.creditedDate,

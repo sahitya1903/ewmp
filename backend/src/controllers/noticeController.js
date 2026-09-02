@@ -1,4 +1,16 @@
 import Notice from "../models/Notice.js";
+import User from "../models/User.js";
+import { notifyMany } from "../lib/notify.js";
+
+async function fanOutNotice(notice, exceptUserId, verb) {
+  const recipients = await User.find({ isActive: true, _id: { $ne: exceptUserId } }, "_id");
+  await notifyMany(
+    recipients.map((u) => u._id),
+    "announcement",
+    `${verb}: ${notice.title}`,
+    notice.link
+  );
+}
 
 export async function listNotices(req, res) {
   const filter = {};
@@ -38,6 +50,8 @@ export async function createNotice(req, res) {
     createdBy: req.user.sub,
   });
 
+  await fanOutNotice(notice, req.user.sub, "New notice");
+
   res.status(201).json({ notice: await notice.populate("createdBy", "name") });
 }
 
@@ -69,6 +83,7 @@ export async function updateNotice(req, res) {
   }
 
   await notice.save();
+  await fanOutNotice(notice, req.user.sub, "Notice updated");
   res.json({ notice: await notice.populate("createdBy", "name") });
 }
 
