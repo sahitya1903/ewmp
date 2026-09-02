@@ -3,6 +3,7 @@ import EmployeeProfile from "../models/EmployeeProfile.js";
 import Salary from "../models/Salary.js";
 import SalaryPayment from "../models/SalaryPayment.js";
 import { getDaysInMonth, getHolidaySet, isWorkingDay } from "./workingDays.js";
+import { startOfDay } from "./dates.js";
 
 // Days in the given month that fall before the employee's joiningDate (0 if they
 // joined before this month, and the full month if they haven't joined yet).
@@ -40,8 +41,7 @@ export async function computeSalaryForUser(userId, month, year) {
   // A working day that's already over (before today) with no record at all — no
   // Present, Absent, or Leave — means the employee neither got approved leave nor
   // logged a work update that day, so it's automatically counted as absent.
-  const now = new Date();
-  now.setUTCHours(0, 0, 0, 0);
+  const now = startOfDay();
   const pastRangeEnd = now < end ? now : end;
 
   const implicitAbsentDates = [];

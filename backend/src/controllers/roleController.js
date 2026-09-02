@@ -1,4 +1,4 @@
-import { ROLE_NAMES } from "../models/Role.js";
+import { ROLE_NAMES } from "../lib/roles.js";
 import CustomRole from "../models/CustomRole.js";
 
 export async function listRoles(req, res) {

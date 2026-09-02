@@ -2,6 +2,7 @@ import { connectDB } from "../src/lib/db.js";
 import { hashPassword } from "../src/lib/auth.js";
 import mongoose from "mongoose";
 import { getHolidaySet, isWorkingDay } from "../src/lib/workingDays.js";
+import { startOfDay, eachDate } from "../src/lib/dates.js";
 import { assignPaidStatusForDates } from "../src/lib/leavePolicy.js";
 import { computeSalaryForUser } from "../src/lib/salaryCalc.js";
 import User from "../src/models/User.js";
@@ -14,6 +15,7 @@ import Salary from "../src/models/Salary.js";
 import SalaryPayment from "../src/models/SalaryPayment.js";
 import Notification from "../src/models/Notification.js";
 import Notice from "../src/models/Notice.js";
+import CustomRole from "../src/models/CustomRole.js";
 
 const PASSWORD = "Test@1234";
 
@@ -23,16 +25,6 @@ function dateKey(date) {
 
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function eachDate(from, to) {
-  const dates = [];
-  const cursor = new Date(from);
-  while (cursor <= to) {
-    dates.push(new Date(cursor));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return dates;
 }
 
 // Joining dates are all at least a year back (as of this seed's fictional "today"
@@ -65,6 +57,7 @@ async function seed() {
     SalaryPayment.deleteMany({}),
     Notification.deleteMany({}),
     Notice.deleteMany({}),
+    CustomRole.deleteMany({}),
   ]);
 
   const users = [];
@@ -99,8 +92,7 @@ async function seed() {
   // always includes today — ready for Admin to verify on the Today's Work
   // Updates screen, and so date-relative scenarios (like the pending leave
   // below) never drift into the past as time goes on.
-  const seedToday = new Date();
-  seedToday.setUTCHours(0, 0, 0, 0);
+  const seedToday = startOfDay();
   const inDays = (n) => {
     const d = new Date(seedToday);
     d.setUTCDate(d.getUTCDate() + n);

@@ -6,11 +6,7 @@ import HolidayManager from "@/components/HolidayManager";
 import NoticeBoard from "@/components/NoticeBoard";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
-
-function today() {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
-}
+import { thisMonth, addMonths } from "@/lib/month";
 
 // Today's headcount snapshot plus the holiday calendar — shared by Admin and
 // HR so both see and manage the same working-day calendar the same way.
@@ -22,11 +18,11 @@ export default function AttendanceOverview() {
   const [absentToday, setAbsentToday] = useState(0);
   const [error, setError] = useState("");
 
-  const [cursor, setCursor] = useState(today());
+  const [cursor, setCursor] = useState(thisMonth());
   const [entriesByDate, setEntriesByDate] = useState({});
 
   useEffect(() => {
-    const { year, month } = today();
+    const { year, month } = thisMonth();
     const todayKey = toDateKey(new Date());
 
     Promise.all([apiFetch("/employees"), apiFetch(`/attendance?month=${month}&year=${year}`)])
@@ -70,10 +66,10 @@ export default function AttendanceOverview() {
   }, [cursor]);
 
   function prevMonth() {
-    setCursor((c) => (c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 }));
+    setCursor((c) => addMonths(c, -1));
   }
   function nextMonth() {
-    setCursor((c) => (c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 }));
+    setCursor((c) => addMonths(c, 1));
   }
 
   return (

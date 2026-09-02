@@ -6,8 +6,8 @@ import LeaveRequest from "../models/LeaveRequest.js";
 import Salary from "../models/Salary.js";
 import SalaryPayment from "../models/SalaryPayment.js";
 import Notification from "../models/Notification.js";
-import { ROLE_NAMES } from "../models/Role.js";
 import CustomRole from "../models/CustomRole.js";
+import { ROLE_NAMES } from "../lib/roles.js";
 import { hashPassword } from "../lib/auth.js";
 
 async function isValidRole(role) {

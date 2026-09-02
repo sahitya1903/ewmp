@@ -1,6 +1,7 @@
 import Attendance from "../models/Attendance.js";
 import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
+import { startOfDay } from "../lib/dates.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 
 export async function markAttendance(req, res) {
@@ -13,8 +14,7 @@ export async function markAttendance(req, res) {
     return res.status(400).json({ error: "status must be Present or Absent" });
   }
 
-  const day = new Date(date);
-  day.setUTCHours(0, 0, 0, 0);
+  const day = startOfDay(date);
 
   const holidaySet = await getHolidaySet(day, new Date(day.getTime() + 86400000));
   if (!isWorkingDay(day, holidaySet)) {

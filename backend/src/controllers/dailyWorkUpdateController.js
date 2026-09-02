@@ -1,13 +1,8 @@
 import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import Attendance from "../models/Attendance.js";
 import User from "../models/User.js";
+import { startOfDay } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
-
-function todayDateOnly() {
-  const date = new Date();
-  date.setUTCHours(0, 0, 0, 0);
-  return date;
-}
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -23,13 +18,13 @@ export async function submitUpdate(req, res) {
     return res.status(400).json({ error: "currentProject, todaysProgress, and remainingWork are required" });
   }
 
-  const existingAttendance = await Attendance.findOne({ user: req.user.sub, date: todayDateOnly() });
+  const existingAttendance = await Attendance.findOne({ user: req.user.sub, date: startOfDay() });
   if (existingAttendance && ["Absent", "Leave"].includes(existingAttendance.status)) {
     return res.status(400).json({ error: `You're marked ${existingAttendance.status} today, so an update can't be submitted` });
   }
 
   const update = await DailyWorkUpdate.findOneAndUpdate(
-    { user: req.user.sub, date: todayDateOnly() },
+    { user: req.user.sub, date: startOfDay() },
     {
       $set: {
         currentProject,
@@ -46,7 +41,7 @@ export async function submitUpdate(req, res) {
   // but never override an existing Absent/Leave record (e.g. an admin-marked
   // absence someone submits an update for anyway shouldn't flip to Present).
   await Attendance.findOneAndUpdate(
-    { user: req.user.sub, date: todayDateOnly() },
+    { user: req.user.sub, date: startOfDay() },
     { $setOnInsert: { status: "Present", markedBy: req.user.sub } },
     { upsert: true, setDefaultsOnInsert: true }
   );
@@ -55,7 +50,7 @@ export async function submitUpdate(req, res) {
 }
 
 export async function getTodayUpdate(req, res) {
-  const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: todayDateOnly() }).populate(
+  const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: startOfDay() }).populate(
     "followUp.by",
     "name"
   );
@@ -63,7 +58,7 @@ export async function getTodayUpdate(req, res) {
 }
 
 export async function listTodayStatus(req, res) {
-  const today = todayDateOnly();
+  const today = startOfDay();
   const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
   const updates = await DailyWorkUpdate.find({ date: today }).populate("followUp.by", "name");
   const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));

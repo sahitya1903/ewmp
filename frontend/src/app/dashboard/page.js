@@ -8,6 +8,7 @@ import NoticeBoard from "@/components/NoticeBoard";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
 import { currency, MONTH_NAMES } from "@/lib/format";
+import { thisMonth, addMonths } from "@/lib/month";
 import { useSalaries } from "@/lib/useSalaries";
 
 const STATUS_STYLES = {
@@ -22,15 +23,6 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString();
 }
 
-function today() {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
-}
-
-function previousMonth({ month, year }) {
-  return month === 1 ? { month: 12, year: year - 1 } : { month: month - 1, year };
-}
-
 const EMPTY_UPDATE_FORM = {
   currentProject: "",
   todaysProgress: "",
@@ -40,12 +32,11 @@ const EMPTY_UPDATE_FORM = {
 };
 
 function EmployeeDashboard() {
-  const [cursor, setCursor] = useState(today());
+  const [cursor, setCursor] = useState(thisMonth());
   const [entriesByDate, setEntriesByDate] = useState({});
   const [calendarLoading, setCalendarLoading] = useState(true);
 
-  const thisMonth = today();
-  const lastMonth = previousMonth(thisMonth);
+  const lastMonth = addMonths(thisMonth(), -1);
   const { salaries: lastMonthSalaries } = useSalaries(lastMonth.month, lastMonth.year);
   const mySalaryLastMonth = lastMonthSalaries[0];
 
@@ -117,7 +108,7 @@ function EmployeeDashboard() {
   // for the day.
   async function loadTodayAttendance() {
     try {
-      const { year, month } = today();
+      const { year, month } = thisMonth();
       const data = await apiFetch(`/attendance?month=${month}&year=${year}`);
       const todayKey = toDateKey(new Date());
       const record = data.attendance.find((a) => toDateKey(a.date) === todayKey);
@@ -190,10 +181,10 @@ function EmployeeDashboard() {
   }
 
   function prevMonth() {
-    setCursor((c) => (c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 }));
+    setCursor((c) => addMonths(c, -1));
   }
   function nextMonth() {
-    setCursor((c) => (c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 }));
+    setCursor((c) => addMonths(c, 1));
   }
 
   function openForm() {
@@ -230,8 +221,8 @@ function EmployeeDashboard() {
         <div className="mx-auto max-w-5xl">
           <h1 className="text-xl font-semibold text-slate-900">Employee Dashboard</h1>
           <p className="mt-1 mb-6 text-sm text-slate-600">
-            Notifications are coming in a later phase — this page currently covers your daily work
-            update, leave, company notices, and the attendance/holiday calendar.
+            Your daily work update, leave, company notices, and the attendance/holiday calendar.
+            Notifications appear in the bell at the top right.
           </p>
 
           <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4">

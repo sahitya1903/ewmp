@@ -4,28 +4,12 @@ import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import User from "../models/User.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
+import { startOfDay, eachDate } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function toDateOnly(value) {
-  const date = new Date(value);
-  date.setUTCHours(0, 0, 0, 0);
-  return date;
-}
-
-function eachDate(from, to) {
-  const dates = [];
-  const cursor = toDateOnly(from);
-  const end = toDateOnly(to);
-  while (cursor <= end) {
-    dates.push(new Date(cursor));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return dates;
 }
 
 function currentYear() {
@@ -39,14 +23,14 @@ export async function applyLeave(req, res) {
     return res.status(400).json({ error: "fromDate, toDate, and reason are required" });
   }
 
-  const from = toDateOnly(fromDate);
-  const to = toDateOnly(toDate);
+  const from = startOfDay(fromDate);
+  const to = startOfDay(toDate);
 
   if (from > to) {
     return res.status(400).json({ error: "fromDate must be on or before toDate" });
   }
 
-  if (from < toDateOnly(new Date())) {
+  if (from < startOfDay(new Date())) {
     return res.status(400).json({ error: "Leave can only be applied for today or a future date" });
   }
 

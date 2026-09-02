@@ -1,4 +1,5 @@
 import Holiday from "../models/Holiday.js";
+import { startOfDay } from "../lib/dates.js";
 
 export async function listHolidays(req, res) {
   const filter = {};
@@ -22,8 +23,7 @@ export async function createHoliday(req, res) {
     return res.status(400).json({ error: "date and name are required" });
   }
 
-  const day = new Date(date);
-  day.setUTCHours(0, 0, 0, 0);
+  const day = startOfDay(date);
 
   try {
     const holiday = await Holiday.create({ date: day, name, description });
