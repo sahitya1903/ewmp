@@ -12,7 +12,6 @@ import Attendance from "../src/models/Attendance.js";
 import DailyWorkUpdate from "../src/models/DailyWorkUpdate.js";
 import Salary from "../src/models/Salary.js";
 import SalaryPayment from "../src/models/SalaryPayment.js";
-import Meeting from "../src/models/Meeting.js";
 import Notification from "../src/models/Notification.js";
 import Notice from "../src/models/Notice.js";
 
@@ -64,7 +63,6 @@ async function seed() {
     DailyWorkUpdate.deleteMany({}),
     Salary.deleteMany({}),
     SalaryPayment.deleteMany({}),
-    Meeting.deleteMany({}),
     Notification.deleteMany({}),
     Notice.deleteMany({}),
   ]);
@@ -383,17 +381,17 @@ async function seed() {
     }
   }
 
-  await Meeting.create({
-    title: "Sprint planning",
-    description: "Plan next two-week sprint for the portal",
-    dateTime: new Date("2026-08-24T10:30:00"),
-    participants: [dev1._id, dev2._id, cybersec1._id, hr1._id],
-    createdBy: hr1._id,
-  });
-
   // Admin-posted notices / meeting links — visible to every employee and shown
-  // on the calendar. One just past, two upcoming (relative to the real "today").
-  await Notice.insertMany([
+  // on the calendar. Notices double as meeting entries: a dated notice with a
+  // link is a meeting. One just past, the rest upcoming (relative to "today").
+  const notices = await Notice.insertMany([
+    {
+      title: "Sprint planning",
+      body: "Plan the next two-week sprint for the portal. Dev and security to attend.",
+      link: "https://meet.google.com/klm-nopq-rst",
+      date: inDays(1),
+      createdBy: hr1._id,
+    },
     {
       title: "Monthly all-hands",
       body: "Company-wide update on Q3 progress and the roadmap ahead. Attendance expected for everyone.",
@@ -416,20 +414,32 @@ async function seed() {
     },
   ]);
 
-  await Notification.insertMany([
-    { user: dev1._id, type: "leave_status", message: "Your leave request (25–26 Aug) was approved." },
-    {
-      user: dev2._id,
-      type: "leave_status",
-      message: "Your leave request (4–24 Aug) was approved. Any days beyond your accrued paid leave balance will be unpaid.",
-    },
-    { user: dev2._id, type: "salary_credited", message: "Your August salary has been credited." },
-    { user: cybersec1._id, type: "leave_status", message: "Your leave request (18–19 Aug) was rejected." },
-    { user: smpm1._id, type: "leave_status", message: "Your leave request (17–19 Aug) was approved." },
-    { user: intern1._id, type: "leave_status", message: "Your leave request (20–21 Aug) was approved." },
-    { user: admin1._id, type: "announcement", message: "New attendance policy effective next month." },
-    { user: hr1._id, type: "meeting", message: "Sprint planning scheduled for 24 Aug, 10:30 AM." },
-  ]);
+  // In-app notifications. Posting a notice fans an "announcement" out to every
+  // other employee (same as the live app does); the older briefing is already
+  // read, the two recent ones are still unread.
+  const notifications = [
+    { user: dev1._id, type: "leave_status", message: "Your leave request (25 Aug 2026 – 26 Aug 2026) was approved.", isRead: true },
+    { user: dev2._id, type: "leave_status", message: "Your leave request (4 Aug 2026 – 24 Aug 2026) was approved.", isRead: true },
+    { user: dev2._id, type: "salary_credited", message: "Your salary for August 2026 (₹54,193) has been credited." },
+    { user: dev1._id, type: "follow_up", message: "Neha Joshi asked for a follow-up on your work update: can you add the ticket number for the auth fix?" },
+    { user: cybersec1._id, type: "leave_status", message: "Your leave request (18 Aug 2026 – 19 Aug 2026) was rejected.", isRead: true },
+    { user: smpm1._id, type: "leave_status", message: "Your leave request (17 Aug 2026 – 19 Aug 2026) was approved.", isRead: true },
+    { user: intern1._id, type: "leave_status", message: "Your leave request (20 Aug 2026 – 21 Aug 2026) was approved.", isRead: true },
+  ];
+  for (const notice of notices) {
+    const past = notice.date < seedToday;
+    for (const user of users) {
+      if (user._id.equals(admin1._id)) continue;
+      notifications.push({
+        user: user._id,
+        type: "announcement",
+        message: `New notice: ${notice.title}`,
+        link: notice.link || undefined,
+        isRead: past,
+      });
+    }
+  }
+  await Notification.insertMany(notifications);
 
   console.log("\nSeed complete. Sample login credentials (password for all: %s):\n", PASSWORD);
   for (const u of SAMPLE_USERS) {
