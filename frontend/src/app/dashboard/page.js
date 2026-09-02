@@ -254,6 +254,12 @@ function EmployeeDashboard() {
               ) : (
                 <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
               )}
+              {todayUpdate?.followUp?.note && (
+                <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                  Follow-up requested
+                  {todayUpdate.followUp.by?.name ? ` by ${todayUpdate.followUp.by.name}` : ""}: {todayUpdate.followUp.note}
+                </p>
+              )}
             </div>
             {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
               <button

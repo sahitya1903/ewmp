@@ -1,11 +1,16 @@
 import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import Attendance from "../models/Attendance.js";
 import User from "../models/User.js";
+import { notify } from "../lib/notify.js";
 
 function todayDateOnly() {
   const date = new Date();
   date.setUTCHours(0, 0, 0, 0);
   return date;
+}
+
+function fmtDay(value) {
+  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 // Submissions always target "today" (server clock, not client input), which is
@@ -50,14 +55,17 @@ export async function submitUpdate(req, res) {
 }
 
 export async function getTodayUpdate(req, res) {
-  const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: todayDateOnly() });
+  const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: todayDateOnly() }).populate(
+    "followUp.by",
+    "name"
+  );
   res.json({ update });
 }
 
 export async function listTodayStatus(req, res) {
   const today = todayDateOnly();
   const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
-  const updates = await DailyWorkUpdate.find({ date: today });
+  const updates = await DailyWorkUpdate.find({ date: today }).populate("followUp.by", "name");
   const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));
 
   const statuses = users.map((user) => {
@@ -65,9 +73,38 @@ export async function listTodayStatus(req, res) {
     return {
       user: { id: user._id, employeeId: user.employeeId, name: user.name, role: user.role },
       submitted: Boolean(update),
+      updateId: update?._id ?? null,
       currentProject: update?.currentProject ?? null,
+      followUp: update?.followUp?.note
+        ? { note: update.followUp.note, by: update.followUp.by?.name ?? null, at: update.followUp.at }
+        : null,
     };
   });
 
   res.json({ statuses, date: today });
+}
+
+// Admin / Management asks an employee to expand on or clarify a work update.
+export async function requestFollowUp(req, res) {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  if (!note || !note.trim()) {
+    return res.status(400).json({ error: "note is required" });
+  }
+
+  const update = await DailyWorkUpdate.findById(id);
+  if (!update) return res.status(404).json({ error: "Work update not found" });
+
+  update.followUp = { note: note.trim(), by: req.user.sub, at: new Date() };
+  await update.save();
+
+  const reviewer = await User.findById(req.user.sub, "name");
+  await notify(
+    update.user,
+    "follow_up",
+    `${reviewer?.name ?? "A reviewer"} asked for a follow-up on your ${fmtDay(update.date)} work update: ${note.trim()}`
+  );
+
+  res.json({ ok: true });
 }

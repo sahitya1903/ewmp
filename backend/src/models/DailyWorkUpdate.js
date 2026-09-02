@@ -9,6 +9,13 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
     remainingWork: { type: String },
     estimatedCompletion: { type: Date },
     additionalWork: { type: String },
+    // A reviewer (Admin/Management) can ask the employee to follow up on an
+    // update — the latest such request lives here and drives a notification.
+    followUp: {
+      note: { type: String, trim: true },
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      at: { type: Date },
+    },
   },
   { timestamps: true }
 );
