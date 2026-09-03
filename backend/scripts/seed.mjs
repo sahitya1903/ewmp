@@ -202,6 +202,14 @@ async function seed() {
   // project and varied but plausible progress notes.
   const reservedKeys = new Set(attendanceRows.map((r) => `${r.user.toString()}:${dateKey(r.date)}`));
 
+  // A work update is submitted on its own day — stamp createdAt/updatedAt to a
+  // plausible end-of-day time so the "submitted"/"edited" times aren't all the
+  // moment the seed ran.
+  const submittedAt = (date, hoursAfterMidnight = 18) => {
+    const stamp = new Date(new Date(date).getTime() + hoursAfterMidnight * 3600 * 1000);
+    return stamp > new Date() ? new Date() : stamp; // today's update can't be "submitted" in the future
+  };
+
   const HAND_WRITTEN_UPDATES = [
     {
       user: dev1._id,
@@ -211,6 +219,8 @@ async function seed() {
       remainingWork: "Role-based dashboards",
       estimatedCompletion: new Date("2026-08-30"),
       additionalWork: "",
+      createdAt: submittedAt("2026-08-21", 17),
+      updatedAt: submittedAt("2026-08-21", 20), // revised later that evening
     },
     {
       user: dev2._id,
@@ -220,6 +230,8 @@ async function seed() {
       remainingWork: "Write regression tests",
       estimatedCompletion: new Date("2026-09-03"),
       additionalWork: "Helped onboard new intern",
+      createdAt: submittedAt("2026-08-27", 18),
+      updatedAt: submittedAt("2026-08-27", 18),
     },
   ];
   const handWrittenKeys = new Set(HAND_WRITTEN_UPDATES.map((u) => `${u.user.toString()}:${dateKey(u.date)}`));
@@ -273,6 +285,8 @@ async function seed() {
               remainingWork: pick(REMAINING_NOTES),
               estimatedCompletion: null,
               additionalWork: "",
+              createdAt: submittedAt(cursor),
+              updatedAt: submittedAt(cursor),
             });
           }
         }
@@ -282,7 +296,9 @@ async function seed() {
   }
 
   await Attendance.insertMany(generatedAttendance);
-  await DailyWorkUpdate.insertMany([...HAND_WRITTEN_UPDATES, ...generatedUpdates]);
+  // timestamps: false so our own createdAt/updatedAt survive instead of being
+  // overwritten with "now".
+  await DailyWorkUpdate.insertMany([...HAND_WRITTEN_UPDATES, ...generatedUpdates], { timestamps: false });
 
   // ---- Salary history -----------------------------------------------------
   // Compute every employee's salary for each month from the one they joined in
