@@ -19,10 +19,15 @@ function serializeFollowUps(followUps = []) {
   }));
 }
 
-// True when the last thread entry is a reviewer request the employee hasn't
-// answered yet.
-function awaitingResponse(followUps = []) {
-  return followUps.length > 0 && followUps[followUps.length - 1].kind === "request";
+// True when the thread is open and the last entry is a reviewer request the
+// employee hasn't answered yet.
+function awaitingResponse(update) {
+  const followUps = update.followUps ?? [];
+  return (
+    !update.followUpClosedAt &&
+    followUps.length > 0 &&
+    followUps[followUps.length - 1].kind === "request"
+  );
 }
 
 // Submissions always target "today" (server clock, not client input), which is
@@ -143,16 +148,21 @@ function toUpdateDTO(u, withUser) {
     // whether (and when) this one was edited after it was first submitted.
     editedAt: u.updatedAt - u.createdAt > 1000 ? u.updatedAt : null,
     followUps: serializeFollowUps(u.followUps),
-    awaitingResponse: awaitingResponse(u.followUps),
+    awaitingResponse: awaitingResponse(u),
+    followUpClosed: Boolean(u.followUpClosedAt),
+    followUpClosedAt: u.followUpClosedAt ?? null,
   };
 }
 
 // The current employee's updates that carry a follow-up thread — so they can
-// see and reply to requests on any of their updates, not just today's.
+// see and reply to requests on any of their updates, not just today's. Only
+// open threads by default; pass ?includeClosed=1 for the full history.
 export async function listMyFollowUps(req, res) {
-  const updates = await DailyWorkUpdate.find({ user: req.user.sub, "followUps.0": { $exists: true } })
-    .populate("followUps.by", "name")
-    .sort({ date: -1 });
+  const filter = { user: req.user.sub, "followUps.0": { $exists: true } };
+  if (req.query.includeClosed !== "1") {
+    filter.followUpClosedAt = null;
+  }
+  const updates = await DailyWorkUpdate.find(filter).populate("followUps.by", "name").sort({ date: -1 });
   res.json({ updates: updates.map((u) => toUpdateDTO(u, false)) });
 }
 
@@ -169,6 +179,9 @@ export async function requestFollowUp(req, res) {
   if (!update) return res.status(404).json({ error: "Work update not found" });
 
   update.followUps.push({ kind: "request", text: note.trim(), by: req.user.sub, at: new Date() });
+  // A fresh request reopens a closed thread.
+  update.followUpClosedAt = null;
+  update.followUpClosedBy = null;
   await update.save();
 
   const reviewer = await User.findById(req.user.sub, "name");
@@ -199,6 +212,9 @@ export async function respondToFollowUp(req, res) {
   if (!update.followUps.some((f) => f.kind === "request")) {
     return res.status(400).json({ error: "There's no follow-up request to respond to" });
   }
+  if (update.followUpClosedAt) {
+    return res.status(400).json({ error: "This follow-up has been closed" });
+  }
 
   update.followUps.push({ kind: "response", text: text.trim(), by: req.user.sub, at: new Date() });
   await update.save();
@@ -216,6 +232,31 @@ export async function respondToFollowUp(req, res) {
         `${employee?.name ?? "An employee"} responded to your follow-up on their ${fmtDay(update.date)} work update: ${text.trim()}`
       )
     )
+  );
+
+  res.json({ ok: true });
+}
+
+// A reviewer ends the follow-up conversation on an update.
+export async function closeFollowUp(req, res) {
+  const { id } = req.params;
+
+  const update = await DailyWorkUpdate.findById(id);
+  if (!update) return res.status(404).json({ error: "Work update not found" });
+  if (update.followUps.length === 0) {
+    return res.status(400).json({ error: "There's no follow-up to close" });
+  }
+  if (update.followUpClosedAt) return res.json({ ok: true });
+
+  update.followUpClosedAt = new Date();
+  update.followUpClosedBy = req.user.sub;
+  await update.save();
+
+  const reviewer = await User.findById(req.user.sub, "name");
+  await notify(
+    update.user,
+    "follow_up",
+    `${reviewer?.name ?? "A reviewer"} closed the follow-up on your ${fmtDay(update.date)} work update.`
   );
 
   res.json({ ok: true });

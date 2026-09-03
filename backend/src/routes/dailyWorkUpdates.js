@@ -8,6 +8,7 @@ import {
   listMyFollowUps,
   requestFollowUp,
   respondToFollowUp,
+  closeFollowUp,
 } from "../controllers/dailyWorkUpdateController.js";
 import { asyncHandler as h } from "../lib/asyncHandler.js";
 
@@ -22,5 +23,6 @@ router.get("/today-status", roleGuard("Admin", "Management"), h(listTodayStatus)
 router.get("/follow-ups", h(listMyFollowUps));
 router.post("/:id/follow-up", roleGuard("Admin", "Management"), h(requestFollowUp));
 router.post("/:id/follow-up-response", h(respondToFollowUp));
+router.post("/:id/follow-up-close", roleGuard("Admin", "Management"), h(closeFollowUp));
 
 export default router;

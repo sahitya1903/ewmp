@@ -52,7 +52,7 @@ HR/Admin can also add extra custom role names (`CustomRole`); anyone assigned on
 
 - **Auth** — credential login (JWT + bcrypt), change password, forgot/reset password (reset links are logged to the console; no email provider wired up).
 - **Employees & roles** — HR/Admin CRUD over people and their profile (phone, monthly salary, joining date). Deleting a person cascades to all their attendance/leave/salary/notification records.
-- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. HR/Admin see every submission in full on a **Work Updates** tab, browsable by month and employee (each day's entry is kept, and a same-day edit is flagged). A reviewer can start a **follow-up thread** on any update; the employee replies from a "Follow-up requests" card on their dashboard, and each side is notified. Requests and replies are appended — editing the update never drops the thread.
+- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. HR/Admin see every submission in full on a **Work Updates** tab, browsable by month and employee (each day's entry is kept, and a same-day edit is flagged). A reviewer can start a **follow-up thread** on any update; the employee replies from a "Follow-up requests" card on their dashboard (active threads only, with a toggle for past ones), and each side is notified. The reviewer closes the thread to end it (a new request reopens it). Requests and replies are appended — editing the update never drops the thread.
 - **Leave & attendance** — apply for leave (today or later), HR/Admin approve/reject, Admin marks Present/Absent directly. Approved leave writes `Leave` attendance rows. Paid leave **accrues 1.75 days per completed month (21/year)**, capped annually; days beyond the accrued balance are unpaid.
 - **Holidays & calendar** — HR/Admin maintain the holiday list; the shared `MonthCalendar` overlays holidays, notices, and (on the employee view) that person's attendance. The weekly off is Monday.
 - **Salary** — `salaryPayable` is derived from attendance: `dailySalary × (days in month − absent − unpaid-leave − pre-joining days)`. HR/Admin/Accounts record the amount actually credited plus an optional remark; edits keep the original crediter and stamp the reviser, and every credit/revision is logged. The **Salary History** tab shows the whole team's credit activity for a month.
@@ -75,9 +75,10 @@ All routes are under `/api`. Everything except the four public auth endpoints re
 | `POST /daily-work-updates` · `GET /daily-work-updates/today` | any | submit / read today's update |
 | `GET /daily-work-updates` | any (own) / reviewer (all, `?userId=`) | full update content for a month (`?month=&year=`) |
 | `GET /daily-work-updates/today-status` | Admin, Management | who has submitted today |
-| `GET /daily-work-updates/follow-ups` | any | own updates that carry a follow-up thread |
-| `POST /daily-work-updates/:id/follow-up` | Admin, Management | add a follow-up request (notifies the employee) |
-| `POST /daily-work-updates/:id/follow-up-response` | update owner | reply to a follow-up (notifies the requester) |
+| `GET /daily-work-updates/follow-ups` | any | own updates with an open follow-up thread (`?includeClosed=1` for all) |
+| `POST /daily-work-updates/:id/follow-up` | Admin, Management | add a follow-up request; reopens a closed thread (notifies the employee) |
+| `POST /daily-work-updates/:id/follow-up-response` | update owner | reply to an open follow-up (notifies the requester) |
+| `POST /daily-work-updates/:id/follow-up-close` | Admin, Management | end the follow-up conversation |
 | `POST /leave-requests` · `GET /leave-requests` | any | apply / list (own, or all for reviewers) |
 | `GET /leave-requests/balance` | any | own accrued/used/remaining for a year |
 | `GET /leave-requests/balances` | reviewer, Accounts_E | everyone's balances |

@@ -221,7 +221,7 @@ async function seed() {
       additionalWork: "",
       createdAt: submittedAt("2026-08-21", 17),
       updatedAt: submittedAt("2026-08-21", 20), // revised later that evening
-      // A resolved follow-up thread — request and reply both kept.
+      // A resolved, closed follow-up thread — shows under "past follow-ups".
       followUps: [
         {
           kind: "request",
@@ -236,6 +236,8 @@ async function seed() {
           at: submittedAt("2026-08-22", 10),
         },
       ],
+      followUpClosedAt: submittedAt("2026-08-22", 11),
+      followUpClosedBy: hr1._id,
     },
     {
       user: dev2._id,

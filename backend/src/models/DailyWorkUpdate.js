@@ -22,6 +22,10 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
     estimatedCompletion: { type: Date },
     additionalWork: { type: String },
     followUps: { type: [followUpEntrySchema], default: [] },
+    // Set when a reviewer ends the follow-up conversation; cleared if a reviewer
+    // opens a new request on the same update.
+    followUpClosedAt: { type: Date },
+    followUpClosedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );

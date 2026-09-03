@@ -82,6 +82,16 @@ export default function WorkUpdatesPanel() {
     }
   }
 
+  async function closeFollowUp(id) {
+    setError("");
+    try {
+      await apiFetch(`/daily-work-updates/${id}/follow-up-close`, { method: "POST" });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   const notSubmittedToday = todayStatuses.filter((s) => !s.submitted);
 
   return (
@@ -136,7 +146,7 @@ export default function WorkUpdatesPanel() {
               className={`rounded-lg border bg-white p-4 ${
                 u.awaitingResponse
                   ? "border-amber-300 ring-1 ring-amber-200"
-                  : u.followUps.length > 0
+                  : u.followUps.length > 0 && !u.followUpClosed
                     ? "border-emerald-200"
                     : "border-slate-200"
               }`}
@@ -148,6 +158,11 @@ export default function WorkUpdatesPanel() {
                   {u.awaitingResponse && (
                     <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       Follow-up pending
+                    </span>
+                  )}
+                  {u.followUpClosed && (
+                    <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                      Follow-up closed
                     </span>
                   )}
                 </h3>
@@ -178,15 +193,26 @@ export default function WorkUpdatesPanel() {
                 <FollowUpThread entries={u.followUps} />
 
                 {followUpFor !== u.id && (
-                  <button
-                    onClick={() => {
-                      setFollowUpFor(u.id);
-                      setNote("");
-                    }}
-                    className="text-slate-600 underline"
-                  >
-                    {u.followUps.length > 0 ? "Request another follow-up" : "Request follow-up"}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setFollowUpFor(u.id);
+                        setNote("");
+                      }}
+                      className="text-slate-600 underline"
+                    >
+                      {u.followUps.length === 0
+                        ? "Request follow-up"
+                        : u.followUpClosed
+                          ? "Reopen with a new request"
+                          : "Request another follow-up"}
+                    </button>
+                    {u.followUps.length > 0 && !u.followUpClosed && (
+                      <button onClick={() => closeFollowUp(u.id)} className="text-slate-600 underline">
+                        Close follow-up
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {followUpFor === u.id && (
