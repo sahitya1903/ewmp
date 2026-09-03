@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+// A follow-up thread on a work update: a reviewer's "request" and the
+// employee's "response", kept in order — nothing is overwritten.
+const followUpEntrySchema = new mongoose.Schema(
+  {
+    kind: { type: String, enum: ["request", "response"], required: true },
+    text: { type: String, trim: true, required: true },
+    by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    at: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const dailyWorkUpdateSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -9,13 +21,7 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
     remainingWork: { type: String },
     estimatedCompletion: { type: Date },
     additionalWork: { type: String },
-    // A reviewer (Admin/Management) can ask the employee to follow up on an
-    // update — the latest such request lives here and drives a notification.
-    followUp: {
-      note: { type: String, trim: true },
-      by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      at: { type: Date },
-    },
+    followUps: { type: [followUpEntrySchema], default: [] },
   },
   { timestamps: true }
 );

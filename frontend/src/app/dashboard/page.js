@@ -5,6 +5,7 @@ import RoleGuard from "@/components/RoleGuard";
 import AccountMenu from "@/components/AccountMenu";
 import MonthCalendar, { toDateKey } from "@/components/MonthCalendar";
 import NoticeBoard from "@/components/NoticeBoard";
+import MyFollowUps from "@/components/MyFollowUps";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
 import { currency, formatDate, MONTH_NAMES } from "@/lib/format";
@@ -241,12 +242,6 @@ function EmployeeDashboard() {
               ) : (
                 <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
               )}
-              {todayUpdate?.followUp?.note && (
-                <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                  Follow-up requested
-                  {todayUpdate.followUp.by?.name ? ` by ${todayUpdate.followUp.by.name}` : ""}: {todayUpdate.followUp.note}
-                </p>
-              )}
             </div>
             {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
               <button
@@ -257,6 +252,8 @@ function EmployeeDashboard() {
               </button>
             )}
           </div>
+
+          <MyFollowUps />
 
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {leaveBalance && (

@@ -221,6 +221,21 @@ async function seed() {
       additionalWork: "",
       createdAt: submittedAt("2026-08-21", 17),
       updatedAt: submittedAt("2026-08-21", 20), // revised later that evening
+      // A resolved follow-up thread — request and reply both kept.
+      followUps: [
+        {
+          kind: "request",
+          text: "Which auth strategy did you go with — sessions or JWT?",
+          by: hr1._id,
+          at: submittedAt("2026-08-21", 21),
+        },
+        {
+          kind: "response",
+          text: "JWT in an httpOnly cookie, 7-day expiry. Notes are in the PR description.",
+          by: dev1._id,
+          at: submittedAt("2026-08-22", 10),
+        },
+      ],
     },
     {
       user: dev2._id,
@@ -299,6 +314,19 @@ async function seed() {
   // timestamps: false so our own createdAt/updatedAt survive instead of being
   // overwritten with "now".
   await DailyWorkUpdate.insertMany([...HAND_WRITTEN_UPDATES, ...generatedUpdates], { timestamps: false });
+
+  // An open follow-up on dev1's most recent update, so logging in as dev1 shows
+  // an actionable "Follow-up requests" card on the dashboard.
+  const dev1Latest = await DailyWorkUpdate.findOne({ user: dev1._id }).sort({ date: -1 });
+  if (dev1Latest) {
+    dev1Latest.followUps.push({
+      kind: "request",
+      text: "Can you add the ticket number for the fix you mentioned?",
+      by: admin1._id,
+      at: new Date(),
+    });
+    await dev1Latest.save();
+  }
 
   // ---- Salary history -----------------------------------------------------
   // Compute every employee's salary for each month from the one they joined in
@@ -429,7 +457,7 @@ async function seed() {
     { user: dev1._id, type: "leave_status", message: "Your leave request (25 Aug 2026 – 26 Aug 2026) was approved.", isRead: true },
     { user: dev2._id, type: "leave_status", message: "Your leave request (4 Aug 2026 – 24 Aug 2026) was approved.", isRead: true },
     { user: dev2._id, type: "salary_credited", message: "Your salary for August 2026 (₹54,193) has been credited." },
-    { user: dev1._id, type: "follow_up", message: "Neha Joshi asked for a follow-up on your work update: can you add the ticket number for the auth fix?" },
+    { user: dev1._id, type: "follow_up", message: "Neha Joshi asked for a follow-up on your work update: Can you add the ticket number for the fix you mentioned?" },
     { user: cybersec1._id, type: "leave_status", message: "Your leave request (18 Aug 2026 – 19 Aug 2026) was rejected.", isRead: true },
     { user: smpm1._id, type: "leave_status", message: "Your leave request (17 Aug 2026 – 19 Aug 2026) was approved.", isRead: true },
     { user: intern1._id, type: "leave_status", message: "Your leave request (20 Aug 2026 – 21 Aug 2026) was approved.", isRead: true },

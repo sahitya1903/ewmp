@@ -9,6 +9,22 @@ function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+function serializeFollowUps(followUps = []) {
+  return followUps.map((f) => ({
+    kind: f.kind,
+    text: f.text,
+    by: f.by?.name ?? null,
+    byId: (f.by?._id ?? f.by)?.toString() ?? null,
+    at: f.at,
+  }));
+}
+
+// True when the last thread entry is a reviewer request the employee hasn't
+// answered yet.
+function awaitingResponse(followUps = []) {
+  return followUps.length > 0 && followUps[followUps.length - 1].kind === "request";
+}
+
 // Submissions always target "today" (server clock, not client input), which is
 // what enforces the 12:00 AM–11:59 PM window — an employee can submit or
 // revise their update any time today, but never for a past or future date.
@@ -24,6 +40,8 @@ export async function submitUpdate(req, res) {
     return res.status(400).json({ error: `You're marked ${existingAttendance.status} today, so an update can't be submitted` });
   }
 
+  // Only the content fields are $set — the follow-up thread is left untouched,
+  // so editing the update never drops an existing follow-up request or reply.
   const update = await DailyWorkUpdate.findOneAndUpdate(
     { user: req.user.sub, date: startOfDay() },
     {
@@ -52,16 +70,20 @@ export async function submitUpdate(req, res) {
 
 export async function getTodayUpdate(req, res) {
   const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: startOfDay() }).populate(
-    "followUp.by",
+    "followUps.by",
     "name"
   );
-  res.json({ update });
+  res.json({
+    update: update
+      ? { ...update.toObject(), followUps: serializeFollowUps(update.followUps) }
+      : null,
+  });
 }
 
 export async function listTodayStatus(req, res) {
   const today = startOfDay();
   const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
-  const updates = await DailyWorkUpdate.find({ date: today }).populate("followUp.by", "name");
+  const updates = await DailyWorkUpdate.find({ date: today }).populate("followUps.by", "name");
   const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));
 
   const statuses = users.map((user) => {
@@ -71,9 +93,7 @@ export async function listTodayStatus(req, res) {
       submitted: Boolean(update),
       updateId: update?._id ?? null,
       currentProject: update?.currentProject ?? null,
-      followUp: update?.followUp?.note
-        ? { note: update.followUp.note, by: update.followUp.by?.name ?? null, at: update.followUp.at }
-        : null,
+      followUps: update ? serializeFollowUps(update.followUps) : [],
     };
   });
 
@@ -100,28 +120,40 @@ export async function listUpdates(req, res) {
 
   const updates = await DailyWorkUpdate.find(filter)
     .populate("user", "name employeeId role")
-    .populate("followUp.by", "name")
+    .populate("followUps.by", "name")
     .sort({ date: -1, createdAt: -1 });
 
-  res.json({
-    updates: updates.map((u) => ({
-      id: u._id,
+  res.json({ updates: updates.map((u) => toUpdateDTO(u, true)) });
+}
+
+function toUpdateDTO(u, withUser) {
+  return {
+    id: u._id,
+    ...(withUser && {
       user: u.user ? { id: u.user._id, name: u.user.name, employeeId: u.user.employeeId } : null,
-      date: u.date,
-      currentProject: u.currentProject,
-      todaysProgress: u.todaysProgress,
-      remainingWork: u.remainingWork,
-      estimatedCompletion: u.estimatedCompletion ?? null,
-      additionalWork: u.additionalWork || "",
-      submittedAt: u.createdAt,
-      // Employees can revise the same day's update until midnight — surface
-      // whether (and when) this one was edited after it was first submitted.
-      editedAt: u.updatedAt - u.createdAt > 1000 ? u.updatedAt : null,
-      followUp: u.followUp?.note
-        ? { note: u.followUp.note, by: u.followUp.by?.name ?? null, at: u.followUp.at }
-        : null,
-    })),
-  });
+    }),
+    date: u.date,
+    currentProject: u.currentProject,
+    todaysProgress: u.todaysProgress,
+    remainingWork: u.remainingWork,
+    estimatedCompletion: u.estimatedCompletion ?? null,
+    additionalWork: u.additionalWork || "",
+    submittedAt: u.createdAt,
+    // Employees can revise the same day's update until midnight — surface
+    // whether (and when) this one was edited after it was first submitted.
+    editedAt: u.updatedAt - u.createdAt > 1000 ? u.updatedAt : null,
+    followUps: serializeFollowUps(u.followUps),
+    awaitingResponse: awaitingResponse(u.followUps),
+  };
+}
+
+// The current employee's updates that carry a follow-up thread — so they can
+// see and reply to requests on any of their updates, not just today's.
+export async function listMyFollowUps(req, res) {
+  const updates = await DailyWorkUpdate.find({ user: req.user.sub, "followUps.0": { $exists: true } })
+    .populate("followUps.by", "name")
+    .sort({ date: -1 });
+  res.json({ updates: updates.map((u) => toUpdateDTO(u, false)) });
 }
 
 // Admin / Management asks an employee to expand on or clarify a work update.
@@ -136,7 +168,7 @@ export async function requestFollowUp(req, res) {
   const update = await DailyWorkUpdate.findById(id);
   if (!update) return res.status(404).json({ error: "Work update not found" });
 
-  update.followUp = { note: note.trim(), by: req.user.sub, at: new Date() };
+  update.followUps.push({ kind: "request", text: note.trim(), by: req.user.sub, at: new Date() });
   await update.save();
 
   const reviewer = await User.findById(req.user.sub, "name");
@@ -144,6 +176,46 @@ export async function requestFollowUp(req, res) {
     update.user,
     "follow_up",
     `${reviewer?.name ?? "A reviewer"} asked for a follow-up on your ${fmtDay(update.date)} work update: ${note.trim()}`
+  );
+
+  res.json({ ok: true });
+}
+
+// The employee replies to a follow-up on their own update. The original update,
+// the request, and every earlier reply are all kept.
+export async function respondToFollowUp(req, res) {
+  const { id } = req.params;
+  const { text } = req.body;
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "text is required" });
+  }
+
+  const update = await DailyWorkUpdate.findById(id);
+  if (!update) return res.status(404).json({ error: "Work update not found" });
+  if (update.user.toString() !== req.user.sub) {
+    return res.status(403).json({ error: "You can only respond to a follow-up on your own update" });
+  }
+  if (!update.followUps.some((f) => f.kind === "request")) {
+    return res.status(400).json({ error: "There's no follow-up request to respond to" });
+  }
+
+  update.followUps.push({ kind: "response", text: text.trim(), by: req.user.sub, at: new Date() });
+  await update.save();
+
+  // Notify whoever asked for a follow-up on this update.
+  const requesterIds = [
+    ...new Set(update.followUps.filter((f) => f.kind === "request" && f.by).map((f) => f.by.toString())),
+  ];
+  const employee = await User.findById(req.user.sub, "name");
+  await Promise.all(
+    requesterIds.map((uid) =>
+      notify(
+        uid,
+        "follow_up",
+        `${employee?.name ?? "An employee"} responded to your follow-up on their ${fmtDay(update.date)} work update: ${text.trim()}`
+      )
+    )
   );
 
   res.json({ ok: true });

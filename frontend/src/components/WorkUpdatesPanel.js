@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { thisMonth } from "@/lib/month";
 import { formatDate } from "@/lib/format";
 import MonthYearPicker from "@/components/MonthYearPicker";
+import FollowUpThread from "@/components/FollowUpThread";
 
 function when(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -130,11 +131,25 @@ export default function WorkUpdatesPanel() {
       ) : (
         <ul className="space-y-3">
           {updates.map((u) => (
-            <li key={u.id} className="rounded-lg border border-slate-200 bg-white p-4">
+            <li
+              key={u.id}
+              className={`rounded-lg border bg-white p-4 ${
+                u.awaitingResponse
+                  ? "border-amber-300 ring-1 ring-amber-200"
+                  : u.followUps.length > 0
+                    ? "border-emerald-200"
+                    : "border-slate-200"
+              }`}
+            >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-slate-900">
                   {u.user ? `${u.user.name} (${u.user.employeeId})` : "—"}
                   <span className="ml-2 font-normal text-slate-500">{formatDate(u.date)}</span>
+                  {u.awaitingResponse && (
+                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                      Follow-up pending
+                    </span>
+                  )}
                 </h3>
                 <span className="text-xs text-slate-400">
                   submitted {when(u.submittedAt)}
@@ -159,15 +174,10 @@ export default function WorkUpdatesPanel() {
                 )}
               </dl>
 
-              <div className="mt-3 border-t border-slate-100 pt-2 text-xs">
-                {u.followUp ? (
-                  <p className="text-amber-700">
-                    Follow-up{u.followUp.by ? ` by ${u.followUp.by}` : ""}: {u.followUp.note}
-                    <button onClick={() => setFollowUpFor(u.id)} className="ml-2 text-slate-500 underline">
-                      Request again
-                    </button>
-                  </p>
-                ) : followUpFor === u.id ? null : (
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-2 text-xs">
+                <FollowUpThread entries={u.followUps} />
+
+                {followUpFor !== u.id && (
                   <button
                     onClick={() => {
                       setFollowUpFor(u.id);
@@ -175,7 +185,7 @@ export default function WorkUpdatesPanel() {
                     }}
                     className="text-slate-600 underline"
                   >
-                    Request follow-up
+                    {u.followUps.length > 0 ? "Request another follow-up" : "Request follow-up"}
                   </button>
                 )}
 
