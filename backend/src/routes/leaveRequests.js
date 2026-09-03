@@ -8,16 +8,17 @@ import {
   listLeaveBalances,
 } from "../controllers/leaveController.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
+import { asyncHandler as h } from "../lib/asyncHandler.js";
 
 const router = Router();
 
 router.use(authGuard);
 
-router.post("/", applyLeave);
-router.get("/", listLeaveRequests);
-router.get("/balance", getLeaveBalanceForUser);
+router.post("/", h(applyLeave));
+router.get("/", h(listLeaveRequests));
+router.get("/balance", h(getLeaveBalanceForUser));
 // Accounts can see balances too (read-only) to cross-check payroll deductions.
-router.get("/balances", roleGuard(...REVIEWER_ROLES, "Accounts_E"), listLeaveBalances);
-router.patch("/:id/status", roleGuard(...REVIEWER_ROLES), reviewLeaveRequest);
+router.get("/balances", roleGuard(...REVIEWER_ROLES, "Accounts_E"), h(listLeaveBalances));
+router.patch("/:id/status", roleGuard(...REVIEWER_ROLES), h(reviewLeaveRequest));
 
 export default router;

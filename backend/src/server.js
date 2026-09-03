@@ -34,7 +34,16 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/notices", noticeRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
+  // Bad input that slipped past a controller's own checks (invalid date, failed
+  // schema validation, malformed id) is the client's fault, not a server error.
+  if (err?.name === "ValidationError" || err?.name === "CastError") {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON body" });
+  }
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
 });

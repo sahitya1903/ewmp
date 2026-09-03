@@ -6,14 +6,15 @@ import {
   listTodayStatus,
   requestFollowUp,
 } from "../controllers/dailyWorkUpdateController.js";
+import { asyncHandler as h } from "../lib/asyncHandler.js";
 
 const router = Router();
 
 router.use(authGuard);
 
-router.post("/", submitUpdate);
-router.get("/today", getTodayUpdate);
-router.get("/today-status", roleGuard("Admin", "Management"), listTodayStatus);
-router.post("/:id/follow-up", roleGuard("Admin", "Management"), requestFollowUp);
+router.post("/", h(submitUpdate));
+router.get("/today", h(getTodayUpdate));
+router.get("/today-status", roleGuard("Admin", "Management"), h(listTodayStatus));
+router.post("/:id/follow-up", roleGuard("Admin", "Management"), h(requestFollowUp));
 
 export default router;
