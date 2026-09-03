@@ -4,7 +4,7 @@ import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import User from "../models/User.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
-import { startOfDay, eachDate } from "../lib/dates.js";
+import { startOfDay, eachDate, isValidDate } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
 
@@ -21,6 +21,9 @@ export async function applyLeave(req, res) {
 
   if (!fromDate || !toDate || !reason) {
     return res.status(400).json({ error: "fromDate, toDate, and reason are required" });
+  }
+  if (!isValidDate(fromDate) || !isValidDate(toDate)) {
+    return res.status(400).json({ error: "fromDate and toDate must be valid dates" });
   }
 
   const from = startOfDay(fromDate);

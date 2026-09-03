@@ -1,5 +1,6 @@
 import Notice from "../models/Notice.js";
 import User from "../models/User.js";
+import { isValidDate } from "../lib/dates.js";
 import { notifyMany } from "../lib/notify.js";
 
 async function fanOutNotice(notice, exceptUserId, verb) {
@@ -37,10 +38,10 @@ export async function createNotice(req, res) {
     return res.status(400).json({ error: "link must start with http:// or https://" });
   }
 
-  const day = new Date(date);
-  if (Number.isNaN(day.getTime())) {
+  if (!isValidDate(date)) {
     return res.status(400).json({ error: "date is invalid" });
   }
+  const day = new Date(date);
 
   const notice = await Notice.create({
     title: title.trim(),
@@ -67,9 +68,8 @@ export async function updateNotice(req, res) {
     notice.title = title.trim();
   }
   if (date !== undefined) {
-    const day = new Date(date);
-    if (Number.isNaN(day.getTime())) return res.status(400).json({ error: "date is invalid" });
-    notice.date = day;
+    if (!isValidDate(date)) return res.status(400).json({ error: "date is invalid" });
+    notice.date = new Date(date);
   }
   if (link !== undefined) {
     const trimmed = link?.trim() || "";

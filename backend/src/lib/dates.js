@@ -7,6 +7,10 @@ export function startOfDay(value = new Date()) {
   return date;
 }
 
+export function isValidDate(value) {
+  return !Number.isNaN(new Date(value).getTime());
+}
+
 // Every calendar date from `from` to `to` inclusive, each at UTC midnight.
 export function eachDate(from, to) {
   const dates = [];

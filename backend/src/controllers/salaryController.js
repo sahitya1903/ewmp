@@ -145,7 +145,7 @@ export async function updateCredited(req, res) {
   if (typeof credited !== "boolean") {
     return res.status(400).json({ error: "credited must be a boolean" });
   }
-  if (credited && (typeof amountCredited !== "number" || amountCredited <= 0)) {
+  if (credited && (!Number.isFinite(amountCredited) || amountCredited <= 0)) {
     return res.status(400).json({ error: "amountCredited must be a positive number" });
   }
   if (remark != null && typeof remark !== "string") {

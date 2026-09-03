@@ -1,7 +1,7 @@
 import Attendance from "../models/Attendance.js";
 import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
 import { REVIEWER_ROLES } from "../lib/roles.js";
-import { startOfDay } from "../lib/dates.js";
+import { startOfDay, isValidDate } from "../lib/dates.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 
 export async function markAttendance(req, res) {
@@ -14,7 +14,14 @@ export async function markAttendance(req, res) {
     return res.status(400).json({ error: "status must be Present or Absent" });
   }
 
+  if (!isValidDate(date)) {
+    return res.status(400).json({ error: "date must be a valid date" });
+  }
+
   const day = startOfDay(date);
+  if (day > startOfDay()) {
+    return res.status(400).json({ error: "Attendance can't be marked for a future date" });
+  }
 
   const holidaySet = await getHolidaySet(day, new Date(day.getTime() + 86400000));
   if (!isWorkingDay(day, holidaySet)) {

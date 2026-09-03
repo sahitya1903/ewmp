@@ -1,5 +1,5 @@
 import Holiday from "../models/Holiday.js";
-import { startOfDay } from "../lib/dates.js";
+import { startOfDay, isValidDate } from "../lib/dates.js";
 
 export async function listHolidays(req, res) {
   const filter = {};
@@ -21,6 +21,9 @@ export async function createHoliday(req, res) {
 
   if (!date || !name) {
     return res.status(400).json({ error: "date and name are required" });
+  }
+  if (!isValidDate(date)) {
+    return res.status(400).json({ error: "date must be a valid date" });
   }
 
   const day = startOfDay(date);
