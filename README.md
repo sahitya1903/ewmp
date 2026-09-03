@@ -7,7 +7,7 @@ backend/    Express + Mongoose REST API  (http://localhost:4000)
 frontend/   Next.js UI, no API routes    (http://localhost:3000)
 ```
 
-The frontend never touches MongoDB directly — every request goes through the backend's `/api/*` routes. Auth is a session cookie (`token`, httpOnly, JWT-signed) set by the backend on login; because both apps run on `localhost` (just different ports), the browser sends that cookie to both without extra config. Cross-domain production deploys would need CORS/cookie config revisited.
+The frontend never touches MongoDB directly — every request goes through the backend's `/api/*` routes. Auth is a session cookie (`token`, httpOnly, JWT-signed) set by the backend on login; because both apps run on `localhost` (just different ports), the browser sends that cookie to both without extra config. In production the frontend proxies `/api/*` to the backend (see [Deployment](#deployment)) so the cookie stays first-party.
 
 ## First-time setup
 
@@ -129,3 +129,22 @@ frontend/src/
 2. `backend` verifies the password, signs a JWT, and sets it as an httpOnly cookie.
 3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/hr`, `/change-password` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
 4. Each protected page wraps its content in `<RoleGuard allowedRoles={[...]}>`, which calls `backend`'s `GET /api/auth/me` client-side to confirm the actual role and redirects to `/login` if it doesn't match.
+
+## Deployment
+
+Frontend on Vercel (root dir `frontend`), backend + MongoDB on one Railway project (backend root dir `backend`).
+
+The frontend serves the backend at a same-origin path so the auth cookie stays first-party: set **`BACKEND_URL`** (e.g. `https://api.up.railway.app`, no `NEXT_PUBLIC_` prefix) on Vercel and `NEXT_PUBLIC_API_URL=/api`; `next.config.mjs` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`. Locally `BACKEND_URL` is unset and `apiFetch` calls the backend directly.
+
+**Backend env (Railway):**
+
+| Key | Notes |
+|---|---|
+| `MONGODB_URI` | `${{MongoDB.MONGO_PRIVATE_URL}}/ewmp?authSource=admin` |
+| `JWT_SECRET` | long random string |
+| `NODE_ENV` | `production` — enables `Secure` cookies, stops `forgot-password` returning the reset URL |
+| `CORS_ORIGIN` · `FRONTEND_URL` | the Vercel URL |
+
+`PORT` is injected by the host. `npm start` runs `node --env-file-if-exists=.env src/server.js`, so it works with or without a `.env` file.
+
+Seed once against the DB's public URL locally (`npm run seed` wipes everything), or create a single admin by hand.
