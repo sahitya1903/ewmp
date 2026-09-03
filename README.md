@@ -41,8 +41,8 @@ One built-in role per person, set by HR/Admin. `Admin` and `Management` (HR) are
 
 | Role | Home page | Can do |
 |---|---|---|
-| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave, record salary payments, add/remove employees |
-| `Management` (HR) | `/hr` | Everything Admin can except marking attendance; also manages custom roles |
+| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave & work updates, record salary payments, add/remove employees |
+| `Management` (HR) | `/hr` | Everything Admin can except marking attendance & posting notices; also manages custom roles |
 | `Accounts_E` | `/accounts` | Record salary payments, view leave balances |
 | `Developer_E`, `Cyber Security_E`, `Social Media & Performance Marketing_E`, `Intern` | `/dashboard` | Submit daily work update, apply for leave, view own calendar/salary/notifications |
 
@@ -52,7 +52,7 @@ HR/Admin can also add extra custom role names (`CustomRole`); anyone assigned on
 
 - **Auth** — credential login (JWT + bcrypt), change password, forgot/reset password (reset links are logged to the console; no email provider wired up).
 - **Employees & roles** — HR/Admin CRUD over people and their profile (phone, monthly salary, joining date). Deleting a person cascades to all their attendance/leave/salary/notification records.
-- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. Reviewers can request a follow-up with a note.
+- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. HR/Admin see every submission in full on a **Work Updates** tab, browsable by month and employee (each day's entry is kept, and a same-day edit is flagged); reviewers can request a follow-up with a note.
 - **Leave & attendance** — apply for leave (today or later), HR/Admin approve/reject, Admin marks Present/Absent directly. Approved leave writes `Leave` attendance rows. Paid leave **accrues 1.75 days per completed month (21/year)**, capped annually; days beyond the accrued balance are unpaid.
 - **Holidays & calendar** — HR/Admin maintain the holiday list; the shared `MonthCalendar` overlays holidays, notices, and (on the employee view) that person's attendance. The weekly off is Monday.
 - **Salary** — `salaryPayable` is derived from attendance: `dailySalary × (days in month − absent − unpaid-leave − pre-joining days)`. HR/Admin/Accounts record the amount actually credited plus an optional remark; edits keep the original crediter and stamp the reviser, and every credit/revision is logged. The **Salary History** tab shows the whole team's credit activity for a month.
@@ -73,6 +73,7 @@ All routes are under `/api`. Everything except the four public auth endpoints re
 | `GET /roles` | any | built-in + custom role names |
 | `POST /roles` | reviewer | add a custom role |
 | `POST /daily-work-updates` · `GET /daily-work-updates/today` | any | submit / read today's update |
+| `GET /daily-work-updates` | any (own) / reviewer (all, `?userId=`) | full update content for a month (`?month=&year=`) |
 | `GET /daily-work-updates/today-status` | Admin, Management | who has submitted today |
 | `POST /daily-work-updates/:id/follow-up` | Admin, Management | request a follow-up (notifies the employee) |
 | `POST /leave-requests` · `GET /leave-requests` | any | apply / list (own, or all for reviewers) |

@@ -6,7 +6,7 @@ import AccountMenu from "@/components/AccountMenu";
 import AttendanceOverview from "@/components/AttendanceOverview";
 import NoticeManager from "@/components/NoticeManager";
 import LeaveRequestsPanel from "@/components/LeaveRequestsPanel";
-import DailyUpdatesStatus from "@/components/DailyUpdatesStatus";
+import WorkUpdatesPanel from "@/components/WorkUpdatesPanel";
 import LeaveBalancesPanel from "@/components/LeaveBalancesPanel";
 import EmployeesSection from "@/components/EmployeesSection";
 import InternsSection from "@/components/InternsSection";
@@ -113,11 +113,6 @@ function Attendance() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Today&apos;s Work Updates</h2>
-        <DailyUpdatesStatus />
-      </section>
-
-      <section>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Paid Leave Balances</h2>
         <LeaveBalancesPanel />
       </section>
@@ -131,6 +126,7 @@ function AdminConsole() {
   const TABS = [
     { key: "overview", label: "Overview" },
     { key: "attendance", label: "Attendance" },
+    { key: "updates", label: "Work Updates" },
     { key: "notices", label: "Notices" },
     { key: "employees", label: "Employees" },
     { key: "interns", label: "Interns" },
@@ -161,6 +157,7 @@ function AdminConsole() {
 
           {tab === "overview" && <AttendanceOverview />}
           {tab === "attendance" && <Attendance />}
+          {tab === "updates" && <WorkUpdatesPanel />}
           {tab === "notices" && <NoticeManager />}
           {tab === "employees" && <EmployeesSection />}
           {tab === "interns" && <InternsSection />}

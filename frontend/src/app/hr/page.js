@@ -5,6 +5,7 @@ import RoleGuard from "@/components/RoleGuard";
 import AccountMenu from "@/components/AccountMenu";
 import AttendanceOverview from "@/components/AttendanceOverview";
 import LeaveRequestsPanel from "@/components/LeaveRequestsPanel";
+import WorkUpdatesPanel from "@/components/WorkUpdatesPanel";
 import EmployeesSection from "@/components/EmployeesSection";
 import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
@@ -14,6 +15,7 @@ function HrConsole() {
 
   const TABS = [
     { key: "overview", label: "Overview" },
+    { key: "updates", label: "Work Updates" },
     { key: "employees", label: "Employees" },
     { key: "interns", label: "Interns" },
     { key: "salaries", label: "Salaries" },
@@ -42,6 +44,7 @@ function HrConsole() {
           </div>
 
           {tab === "overview" && <AttendanceOverview />}
+          {tab === "updates" && <WorkUpdatesPanel />}
           {tab === "leave" && <LeaveRequestsPanel />}
           {tab === "salaries" && <SalariesSection />}
           {tab === "employees" && <EmployeesSection showRoleManager />}

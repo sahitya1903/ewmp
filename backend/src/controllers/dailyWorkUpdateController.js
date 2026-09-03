@@ -3,6 +3,7 @@ import Attendance from "../models/Attendance.js";
 import User from "../models/User.js";
 import { startOfDay } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
+import { REVIEWER_ROLES } from "../lib/roles.js";
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -77,6 +78,50 @@ export async function listTodayStatus(req, res) {
   });
 
   res.json({ statuses, date: today });
+}
+
+// Full work-update content for HR/Admin (or an employee's own history),
+// filtered by employee and/or calendar month, newest first.
+export async function listUpdates(req, res) {
+  const filter = {};
+
+  if (REVIEWER_ROLES.includes(req.user.role)) {
+    if (req.query.userId) filter.user = req.query.userId;
+  } else {
+    filter.user = req.user.sub;
+  }
+
+  // Always scope to a single month — default to the current one — so this never
+  // returns an employee's entire multi-year history in one response.
+  const now = new Date();
+  const month = Number(req.query.month) || now.getUTCMonth() + 1;
+  const year = Number(req.query.year) || now.getUTCFullYear();
+  filter.date = { $gte: new Date(Date.UTC(year, month - 1, 1)), $lt: new Date(Date.UTC(year, month, 1)) };
+
+  const updates = await DailyWorkUpdate.find(filter)
+    .populate("user", "name employeeId role")
+    .populate("followUp.by", "name")
+    .sort({ date: -1, createdAt: -1 });
+
+  res.json({
+    updates: updates.map((u) => ({
+      id: u._id,
+      user: u.user ? { id: u.user._id, name: u.user.name, employeeId: u.user.employeeId } : null,
+      date: u.date,
+      currentProject: u.currentProject,
+      todaysProgress: u.todaysProgress,
+      remainingWork: u.remainingWork,
+      estimatedCompletion: u.estimatedCompletion ?? null,
+      additionalWork: u.additionalWork || "",
+      submittedAt: u.createdAt,
+      // Employees can revise the same day's update until midnight — surface
+      // whether (and when) this one was edited after it was first submitted.
+      editedAt: u.updatedAt - u.createdAt > 1000 ? u.updatedAt : null,
+      followUp: u.followUp?.note
+        ? { note: u.followUp.note, by: u.followUp.by?.name ?? null, at: u.followUp.at }
+        : null,
+    })),
+  });
 }
 
 // Admin / Management asks an employee to expand on or clarify a work update.
