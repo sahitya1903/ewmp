@@ -255,29 +255,29 @@ function EmployeeDashboard() {
 
           <MyFollowUps />
 
-          <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {leaveBalance && (
-              <StatTile
-                label="Paid leaves remaining"
-                value={`${leaveBalance.remaining}`}
-                sub={`${leaveBalance.accrued} accrued of ${leaveBalance.quota}/year`}
-              />
-            )}
-            {mySalaryLastMonth && (
-              <StatTile
-                label="Last month's salary"
-                value={currency(mySalaryLastMonth.salaryPayable)}
-                sub={
-                  mySalaryLastMonth.credited
-                    ? `Credited ${formatDateDMY(mySalaryLastMonth.creditedDate)}`
-                    : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
-                }
-              />
-            )}
-          </div>
-
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                {leaveBalance && (
+                  <StatTile
+                    label="Paid leaves remaining"
+                    value={`${leaveBalance.remaining}`}
+                    sub={`${leaveBalance.accrued} accrued of ${leaveBalance.quota}/year`}
+                  />
+                )}
+                {mySalaryLastMonth && (
+                  <StatTile
+                    label="Last month's salary"
+                    value={currency(mySalaryLastMonth.salaryPayable)}
+                    sub={
+                      mySalaryLastMonth.credited
+                        ? `Credited ${formatDateDMY(mySalaryLastMonth.creditedDate)}`
+                        : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
+                    }
+                  />
+                )}
+              </div>
+
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-900">My Leave Requests</h2>
                 <button
