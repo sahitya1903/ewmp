@@ -42,6 +42,15 @@ export default function NotificationBell() {
     await apiFetch("/notifications/read-all", { method: "POST" }).catch(() => {});
   }
 
+  // Opening the panel is how you "read" your notifications — clear the badge
+  // right away instead of making unread status depend on clicking each one
+  // individually, so it never comes back just for having been seen.
+  function toggleOpen() {
+    const next = !open;
+    setOpen(next);
+    if (next && unread > 0) markAll();
+  }
+
   async function handleClick(n) {
     if (!n.isRead) {
       setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, isRead: true } : x)));
@@ -55,7 +64,7 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         className="relative flex text-slate-600 hover:text-slate-900"
         aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
       >
