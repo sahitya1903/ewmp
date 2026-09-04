@@ -42,7 +42,7 @@ export default function SalaryPaymentDialog({ salary, onClose, onCredited }) {
     <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
       >
         <h2 className="mb-1 text-lg font-semibold text-slate-900">
           {editing ? "Edit salary payment" : "Record salary payment"}

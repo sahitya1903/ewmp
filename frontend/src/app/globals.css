@@ -13,6 +13,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  /* Guards against a wide element (a table, a modal, an absolutely-positioned
+     dropdown) forcing the whole page to scroll sideways on a phone screen —
+     each scrollable region should opt in via its own overflow-x-auto instead. */
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

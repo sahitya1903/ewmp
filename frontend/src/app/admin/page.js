@@ -137,16 +137,16 @@ function AdminConsole() {
   return (
     <>
       <AccountMenu />
-      <main className="min-h-screen bg-slate-50 p-10">
+      <main className="min-h-screen bg-slate-50 p-4 sm:p-10">
         <div className="mx-auto max-w-5xl">
           <h1 className="mb-4 text-xl font-semibold text-slate-900">Admin Dashboard</h1>
 
-          <div className="mb-6 flex items-center gap-2">
+          <div className="mb-6 flex flex-wrap items-center gap-2">
             {TABS.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`rounded px-3 py-1.5 text-sm ${
+                className={`shrink-0 rounded px-3 py-1.5 text-sm ${
                   tab === t.key ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
                 }`}
               >

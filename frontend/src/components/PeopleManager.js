@@ -203,7 +203,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
           >
             <h2 className="mb-1 text-lg font-semibold text-slate-900">
               {editing ? `Edit ${heading.toLowerCase().replace(/s$/, "")}` : addButtonLabel}
@@ -211,9 +211,9 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
             {editing && <p className="mb-4 text-xs text-slate-500">Employee ID: {editing.employeeId}</p>}
             {!editing && <div className="mb-4" />}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {roleOptions.length > 1 && (
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-slate-700">Role</label>
                   <select
                     required
@@ -230,7 +230,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                 </div>
               )}
 
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-slate-700">Name</label>
                 <input
                   required
@@ -240,7 +240,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
                 <input
                   type="email"
@@ -251,7 +251,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-slate-700">
                   {editing ? "Reset password (optional)" : "Password"}
                 </label>
@@ -287,7 +287,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-slate-700">Joining date</label>
                 <input
                   type="date"

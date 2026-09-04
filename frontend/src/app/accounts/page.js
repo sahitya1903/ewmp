@@ -10,7 +10,7 @@ function AccountsConsole() {
   return (
     <>
       <AccountMenu />
-      <main className="min-h-screen bg-slate-50 p-10">
+      <main className="min-h-screen bg-slate-50 p-4 sm:p-10">
         <div className="mx-auto max-w-5xl space-y-6">
           <h1 className="text-xl font-semibold text-slate-900">Accounts Dashboard</h1>
 

@@ -54,7 +54,7 @@ export default function LeaveRequestsPanel() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {["Pending", "Approved", "Rejected", ""].map((s) => (
           <button
             key={s || "all"}

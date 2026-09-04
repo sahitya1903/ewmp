@@ -61,7 +61,7 @@ export default function MyFollowUps() {
 
   return (
     <div className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2 className="text-sm font-semibold text-slate-900">
           Follow-up requests{open.length > 0 ? ` (${open.length} active)` : ""}
         </h2>
@@ -89,9 +89,9 @@ export default function MyFollowUps() {
                     : "border-slate-200"
               }`}
             >
-              <div className="mb-2 flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-slate-900">{u.currentProject}</span>
-                <span className="text-xs text-slate-500">
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                <span className="min-w-0 wrap-break-word text-sm font-medium text-slate-900">{u.currentProject}</span>
+                <span className="shrink-0 text-xs text-slate-500">
                   {formatDate(u.date)} update
                   {u.followUpClosed && " · closed"}
                 </span>

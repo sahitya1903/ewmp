@@ -28,14 +28,14 @@ export default function AccountMenu() {
   }
 
   return (
-    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-10 py-3 text-sm">
-      <span className="text-slate-700">{name ? `Welcome, ${name}` : ""}</span>
-      <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200 bg-white px-4 py-3 text-sm sm:px-10">
+      <span className="min-w-0 truncate text-slate-700">{name ? `Welcome, ${name}` : ""}</span>
+      <div className="flex items-center gap-3 sm:gap-4">
         <NotificationBell />
-        <Link href="/change-password" className="text-slate-600 underline">
+        <Link href="/change-password" className="whitespace-nowrap text-slate-600 underline">
           Change password
         </Link>
-        <button onClick={handleLogout} className="text-slate-600 underline">
+        <button onClick={handleLogout} className="whitespace-nowrap text-slate-600 underline">
           Log out
         </button>
       </div>

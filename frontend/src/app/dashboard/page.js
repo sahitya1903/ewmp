@@ -214,7 +214,7 @@ function EmployeeDashboard() {
   return (
     <>
       <AccountMenu />
-      <main className="min-h-screen bg-slate-50 p-10">
+      <main className="min-h-screen bg-slate-50 p-4 sm:p-10">
         <div className="mx-auto max-w-5xl">
           <h1 className="text-xl font-semibold text-slate-900">Employee Dashboard</h1>
           <p className="mt-1 mb-6 text-sm text-slate-600">
@@ -222,7 +222,7 @@ function EmployeeDashboard() {
             Notifications appear in the bell at the top right.
           </p>
 
-          <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4">
+          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
               {todayUpdate ? (
@@ -246,7 +246,7 @@ function EmployeeDashboard() {
             {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
               <button
                 onClick={openUpdateForm}
-                className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+                className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
               >
                 {todayUpdate ? "Edit update" : "Submit update"}
               </button>
@@ -359,7 +359,7 @@ function EmployeeDashboard() {
           <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
             <form
               onSubmit={handleSubmit}
-              className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+              className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
             >
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Apply for leave</h2>
 
@@ -418,7 +418,7 @@ function EmployeeDashboard() {
           <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
             <form
               onSubmit={handleUpdateSubmit}
-              className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+              className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
             >
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Today&apos;s work update</h2>
 
