@@ -7,10 +7,11 @@ import AttendanceOverview from "@/components/AttendanceOverview";
 import NoticeManager from "@/components/NoticeManager";
 import LeaveRequestsPanel from "@/components/LeaveRequestsPanel";
 import WorkUpdatesPanel from "@/components/WorkUpdatesPanel";
-import LeaveBalancesPanel from "@/components/LeaveBalancesPanel";
+import PaidLeavesSection from "@/components/PaidLeavesSection";
 import EmployeesSection from "@/components/EmployeesSection";
 import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
+import SalaryHistorySection from "@/components/SalaryHistorySection";
 import { toDateKey } from "@/components/MonthCalendar";
 import { apiFetch } from "@/lib/api";
 
@@ -110,23 +111,18 @@ function AttendanceForm() {
 
 function Attendance() {
   return (
-    <div className="space-y-8">
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Mark Attendance</h2>
-        <AttendanceForm />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Paid Leave Balances</h2>
-        <LeaveBalancesPanel />
-      </section>
-    </div>
+    <section>
+      <h2 className="mb-3 text-sm font-semibold text-slate-900">Mark Attendance</h2>
+      <AttendanceForm />
+    </section>
   );
 }
 
 function AdminConsole() {
   const [tab, setTab] = useState("overview");
 
+  // Same relative order as HR and Accounts: overview, daily ops, people,
+  // money, then leave — each page just shows whichever subset applies to it.
   const TABS = [
     { key: "overview", label: "Overview" },
     { key: "attendance", label: "Attendance" },
@@ -135,6 +131,8 @@ function AdminConsole() {
     { key: "employees", label: "Employees" },
     { key: "interns", label: "Interns" },
     { key: "salaries", label: "Salaries" },
+    { key: "salaryHistory", label: "Salary History" },
+    { key: "leaves", label: "Paid Leaves" },
     { key: "leave", label: "Leave Requests" },
   ];
 
@@ -166,6 +164,8 @@ function AdminConsole() {
           {tab === "employees" && <EmployeesSection />}
           {tab === "interns" && <InternsSection />}
           {tab === "salaries" && <SalariesSection />}
+          {tab === "salaryHistory" && <SalaryHistorySection />}
+          {tab === "leaves" && <PaidLeavesSection />}
           {tab === "leave" && <LeaveRequestsPanel />}
         </div>
       </main>

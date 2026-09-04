@@ -6,19 +6,25 @@ import AccountMenu from "@/components/AccountMenu";
 import AttendanceOverview from "@/components/AttendanceOverview";
 import LeaveRequestsPanel from "@/components/LeaveRequestsPanel";
 import WorkUpdatesPanel from "@/components/WorkUpdatesPanel";
+import PaidLeavesSection from "@/components/PaidLeavesSection";
 import EmployeesSection from "@/components/EmployeesSection";
 import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
+import SalaryHistorySection from "@/components/SalaryHistorySection";
 
 function HrConsole() {
   const [tab, setTab] = useState("overview");
 
+  // Same relative order as Admin and Accounts: overview, daily ops, people,
+  // money, then leave — each page just shows whichever subset applies to it.
   const TABS = [
     { key: "overview", label: "Overview" },
     { key: "updates", label: "Work Updates" },
     { key: "employees", label: "Employees" },
     { key: "interns", label: "Interns" },
     { key: "salaries", label: "Salaries" },
+    { key: "salaryHistory", label: "Salary History" },
+    { key: "leaves", label: "Paid Leaves" },
     { key: "leave", label: "Leave Requests" },
   ];
 
@@ -47,6 +53,8 @@ function HrConsole() {
           {tab === "updates" && <WorkUpdatesPanel />}
           {tab === "leave" && <LeaveRequestsPanel />}
           {tab === "salaries" && <SalariesSection />}
+          {tab === "salaryHistory" && <SalaryHistorySection />}
+          {tab === "leaves" && <PaidLeavesSection />}
           {tab === "employees" && <EmployeesSection showRoleManager />}
           {tab === "interns" && <InternsSection />}
         </div>
