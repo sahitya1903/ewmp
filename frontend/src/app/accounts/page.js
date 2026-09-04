@@ -14,11 +14,6 @@ function AccountsConsole() {
         <div className="mx-auto max-w-5xl space-y-6">
           <h1 className="text-xl font-semibold text-slate-900">Accounts Dashboard</h1>
 
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
-            <NoticeBoard />
-          </div>
-
           <SalariesSection />
 
           <div>
@@ -27,6 +22,10 @@ function AccountsConsole() {
               Cross-check paid-leave usage against deductions above.
             </p>
             <LeaveBalancesPanel />
+          </div>
+          <div>
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
+            <NoticeBoard />
           </div>
         </div>
       </main>
