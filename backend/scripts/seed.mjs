@@ -1,7 +1,7 @@
 import { connectDB } from "../src/lib/db.js";
 import { hashPassword } from "../src/lib/auth.js";
 import mongoose from "mongoose";
-import { getHolidaySet, isWorkingDay } from "../src/lib/workingDays.js";
+import { getHolidaySet, isWorkingDay, isWeeklyOff } from "../src/lib/workingDays.js";
 import { startOfDay, eachDate } from "../src/lib/dates.js";
 import { assignPaidStatusForDates } from "../src/lib/leavePolicy.js";
 import { computeSalaryForUser } from "../src/lib/salaryCalc.js";
@@ -27,20 +27,23 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Joining dates are all at least a year back (as of this seed's fictional "today"
-// of late Aug 2026), spread out for a realistic tenure mix — long enough that
-// everyone has had time to accrue a real paid-leave balance under the 1.75/month
-// policy, not just the handful of days a brand-new joiner would have.
+// Joining dates are all on/after 1 Aug 2026 (per the current onboarding cutoff),
+// staggered across the first two weeks of the month so the seed still shows off
+// a mix: some joined exactly on the 1st (a full month counts for salary), some
+// mid-month (that month's salary is prorated for the pre-joining days). With
+// dates this recent, paid-leave accrual (1.75/completed month) is thin — often
+// 0-1 day by the time the seed runs — so leave taken in this data lands mostly
+// or fully unpaid, same as it would for any real brand-new hire.
 const SAMPLE_USERS = [
-  { employeeId: "EMP001", name: "Aarav Shah", email: "dev1@ewmp.test", role: "Developer_E", phone: "9000000001", monthlySalary: 55000, joiningDate: "2025-01-15" },
-  { employeeId: "EMP002", name: "Priya Nair", email: "dev2@ewmp.test", role: "Developer_E", phone: "9000000002", monthlySalary: 60000, joiningDate: "2024-11-01" },
-  { employeeId: "EMP003", name: "Rohan Mehta", email: "cybersec1@ewmp.test", role: "Cyber Security_E", phone: "9000000003", monthlySalary: 65000, joiningDate: "2025-03-10" },
-  { employeeId: "EMP004", name: "Sneha Kulkarni", email: "smpm1@ewmp.test", role: "Social Media & Performance Marketing_E", phone: "9000000004", monthlySalary: 48000, joiningDate: "2024-06-01" },
-  { employeeId: "EMP005", name: "Vikram Rao", email: "accounts1@ewmp.test", role: "Accounts_E", phone: "9000000005", monthlySalary: 52000, joiningDate: "2023-08-20" },
-  { employeeId: "EMP006", name: "Neha Joshi", email: "admin1@ewmp.test", role: "Admin", phone: "9000000006", monthlySalary: 58000, joiningDate: "2023-05-05" },
-  { employeeId: "EMP007", name: "Karan Malhotra", email: "hr1@ewmp.test", role: "Management", phone: "9000000007", monthlySalary: 90000, joiningDate: "2022-09-12" },
-  { employeeId: "INT001", name: "Ananya Verma", email: "intern1@ewmp.test", role: "Intern", phone: "9000000008", monthlySalary: 15000, joiningDate: "2025-07-01" },
-  { employeeId: "INT002", name: "Rahul Singh", email: "intern2@ewmp.test", role: "Intern", phone: "9000000009", monthlySalary: 12000, joiningDate: "2025-08-15" },
+  { employeeId: "EMP001", name: "Aarav Shah", email: "dev1@ewmp.test", role: "Developer_E", phone: "9000000001", monthlySalary: 55000, joiningDate: "2026-08-01" },
+  { employeeId: "EMP002", name: "Priya Nair", email: "dev2@ewmp.test", role: "Developer_E", phone: "9000000002", monthlySalary: 60000, joiningDate: "2026-08-01" },
+  { employeeId: "EMP003", name: "Rohan Mehta", email: "cybersec1@ewmp.test", role: "Cyber Security_E", phone: "9000000003", monthlySalary: 65000, joiningDate: "2026-08-03" },
+  { employeeId: "EMP004", name: "Sneha Kulkarni", email: "smpm1@ewmp.test", role: "Social Media & Performance Marketing_E", phone: "9000000004", monthlySalary: 48000, joiningDate: "2026-08-05" },
+  { employeeId: "EMP005", name: "Vikram Rao", email: "accounts1@ewmp.test", role: "Accounts_E", phone: "9000000005", monthlySalary: 52000, joiningDate: "2026-08-01" },
+  { employeeId: "EMP006", name: "Neha Joshi", email: "admin1@ewmp.test", role: "Admin", phone: "9000000006", monthlySalary: 58000, joiningDate: "2026-08-01" },
+  { employeeId: "EMP007", name: "Karan Malhotra", email: "hr1@ewmp.test", role: "Management", phone: "9000000007", monthlySalary: 90000, joiningDate: "2026-08-01" },
+  { employeeId: "INT001", name: "Ananya Verma", email: "intern1@ewmp.test", role: "Intern", phone: "9000000008", monthlySalary: 15000, joiningDate: "2026-08-10" },
+  { employeeId: "INT002", name: "Rahul Singh", email: "intern2@ewmp.test", role: "Intern", phone: "9000000009", monthlySalary: 12000, joiningDate: "2026-08-15" },
 ];
 
 async function seed() {
@@ -85,7 +88,10 @@ async function seed() {
     { date: new Date("2026-08-15"), name: "Independence Day" },
     { date: new Date("2026-10-02"), name: "Gandhi Jayanti" },
     { date: new Date("2026-11-08"), name: "Diwali" },
+    { date: new Date("2026-12-25"), name: "Christmas" },
     { date: new Date("2027-01-01"), name: "New Year's Day" },
+    { date: new Date("2027-01-26"), name: "Republic Day" },
+    { date: new Date("2027-03-04"), name: "Holi" },
   ]);
 
   // "Today" is the real current date, not a fixed one, so freshly seeded data
@@ -98,8 +104,15 @@ async function seed() {
     d.setUTCDate(d.getUTCDate() + n);
     return d;
   };
+  // Nudges a date off Monday (the weekly off) — nothing gets scheduled on it,
+  // notices/meetings included.
+  const skipWeeklyOff = (date) => {
+    const d = new Date(date);
+    while (isWeeklyOff(d)) d.setUTCDate(d.getUTCDate() + 1);
+    return d;
+  };
 
-  const holidaySet = await getHolidaySet(new Date(Date.UTC(2022, 0, 1)), new Date(Date.UTC(2027, 1, 1)));
+  const holidaySet = await getHolidaySet(new Date(Date.UTC(2026, 7, 1)), new Date(Date.UTC(2027, 3, 1)));
   const workingDatesBetween = (from, to) => eachDate(from, to).filter((d) => isWorkingDay(d, holidaySet));
 
   // Each crafted leave/absence scenario below reserves its dates so the general
@@ -344,13 +357,13 @@ async function seed() {
   const crediterIds = [admin1._id, hr1._id, accounts1._id];
 
   // Curated months where the amount paid was deliberately *less* than the
-  // computed payable. Keyed by "<employeeId>:<year>-<month>".
+  // computed payable. Keyed by "<employeeId>:<year>-<month>". With everyone
+  // joining in August 2026, that's the only month that's both after joining
+  // and fully in the past by the time this seed runs — so it's the only key
+  // that can ever match.
   const propertyRecoveries = {
-    "EMP001:2026-6": { amount: 2000, remark: "Rs 2,000 recovered for a cracked company laptop screen (accidental damage)." },
-    "EMP003:2026-7": { amount: 2500, remark: "Rs 2,500 recovered for damage to a monitor in the security lab." },
-    "EMP004:2026-5": { amount: 1500, remark: "Rs 1,500 deducted towards lost office property — misplaced access card and laptop charger." },
-    "EMP005:2026-4": { amount: 3000, remark: "Rs 3,000 adjusted against a petty-cash shortfall found during reconciliation." },
-    "EMP002:2026-3": { amount: 1200, remark: "Rs 1,200 recovered for a broken office chair (mishandling)." },
+    "EMP005:2026-8": { amount: 1000, remark: "Rs 1,000 recovered for a misplaced access card." },
+    "INT002:2026-8": { amount: 500, remark: "Rs 500 recovered for a damaged HDMI cable." },
   };
 
   const curMonth = seedToday.getUTCMonth() + 1;
@@ -422,32 +435,33 @@ async function seed() {
   // Admin-posted notices / meeting links — visible to every employee and shown
   // on the calendar. Notices double as meeting entries: a dated notice with a
   // link is a meeting. One just past, the rest upcoming (relative to "today").
+  // Nobody's in on Monday, so none of these ever land on one.
   const notices = await Notice.insertMany([
     {
       title: "Sprint planning",
       body: "Plan the next two-week sprint for the portal. Dev and security to attend.",
       link: "https://meet.google.com/klm-nopq-rst",
-      date: inDays(1),
+      date: skipWeeklyOff(inDays(1)),
       createdBy: hr1._id,
     },
     {
       title: "Monthly all-hands",
       body: "Company-wide update on Q3 progress and the roadmap ahead. Attendance expected for everyone.",
       link: "https://meet.google.com/abc-defg-hij",
-      date: inDays(3),
+      date: skipWeeklyOff(inDays(3)),
       createdBy: admin1._id,
     },
     {
       title: "Office closed for maintenance",
       body: "The office will be closed for electrical maintenance — work from home that day.",
-      date: inDays(10),
+      date: skipWeeklyOff(inDays(10)),
       createdBy: admin1._id,
     },
     {
       title: "New attendance policy briefing",
       body: "Walkthrough of the updated attendance and work-update policy that took effect this month.",
       link: "https://meet.google.com/xyz-uvwx-yz",
-      date: inDays(-4),
+      date: skipWeeklyOff(inDays(-4)),
       createdBy: admin1._id,
     },
   ]);
