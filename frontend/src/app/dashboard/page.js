@@ -9,7 +9,7 @@ import MyFollowUps from "@/components/MyFollowUps";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
 import { currency, formatDateDMY, MONTH_NAMES } from "@/lib/format";
-import { thisMonth, addMonths } from "@/lib/month";
+import { thisMonth, addMonths, today } from "@/lib/month";
 import { useSalaries } from "@/lib/useSalaries";
 
 const STATUS_STYLES = {
@@ -107,7 +107,7 @@ function EmployeeDashboard() {
     try {
       const { year, month } = thisMonth();
       const data = await apiFetch(`/attendance?month=${month}&year=${year}`);
-      const todayKey = toDateKey(new Date());
+      const todayKey = toDateKey(today());
       const record = data.attendance.find((a) => toDateKey(a.date) === todayKey);
       setTodayAttendance(record?.status ?? null);
     } catch {
@@ -367,7 +367,7 @@ function EmployeeDashboard() {
               <input
                 type="date"
                 required
-                min={toDateKey(new Date())}
+                min={toDateKey(today())}
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -377,7 +377,7 @@ function EmployeeDashboard() {
               <input
                 type="date"
                 required
-                min={fromDate || toDateKey(new Date())}
+                min={fromDate || toDateKey(today())}
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"

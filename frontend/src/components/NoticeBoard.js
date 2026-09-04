@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatDateDMY } from "@/lib/format";
 import { toDateKey } from "@/components/MonthCalendar";
+import { today } from "@/lib/month";
 
 // Read-only list of Admin-posted notices and meeting links. Shown on every
 // employee's account. Past notices are hidden by default — every upcoming
@@ -32,7 +33,7 @@ export default function NoticeBoard() {
     );
   }
 
-  const todayKey = toDateKey(new Date());
+  const todayKey = toDateKey(today());
   const sorted = [...notices].sort((a, b) => (toDateKey(a.date) < toDateKey(b.date) ? -1 : 1));
   const upcoming = sorted.filter((n) => toDateKey(n.date) >= todayKey);
   const hasPast = upcoming.length < sorted.length;

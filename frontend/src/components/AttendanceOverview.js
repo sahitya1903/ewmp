@@ -6,7 +6,7 @@ import HolidayManager from "@/components/HolidayManager";
 import NoticeBoard from "@/components/NoticeBoard";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
-import { thisMonth, addMonths } from "@/lib/month";
+import { thisMonth, addMonths, today } from "@/lib/month";
 
 // Today's headcount snapshot plus the holiday calendar — shared by Admin and
 // HR so both see and manage the same working-day calendar the same way.
@@ -23,7 +23,7 @@ export default function AttendanceOverview() {
 
   useEffect(() => {
     const { year, month } = thisMonth();
-    const todayKey = toDateKey(new Date());
+    const todayKey = toDateKey(today());
 
     Promise.all([apiFetch("/employees"), apiFetch(`/attendance?month=${month}&year=${year}`)])
       .then(([employeesData, attendanceData]) => {

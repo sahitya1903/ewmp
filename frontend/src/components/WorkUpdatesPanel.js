@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { thisMonth } from "@/lib/month";
+import { thisMonth, today } from "@/lib/month";
 import { formatDateDMY } from "@/lib/format";
 import MonthYearPicker from "@/components/MonthYearPicker";
 import FollowUpThread from "@/components/FollowUpThread";
@@ -21,7 +21,7 @@ export default function WorkUpdatesPanel() {
   const [userId, setUserId] = useState("");
   // Narrows the fetched month down to one day; defaults to today. It's a
   // client-side filter over the already-fetched month, not a separate query.
-  const [dateFilter, setDateFilter] = useState(() => toDateKey(new Date()));
+  const [dateFilter, setDateFilter] = useState(() => toDateKey(today()));
   const [updates, setUpdates] = useState([]);
   const [todayStatuses, setTodayStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +135,7 @@ export default function WorkUpdatesPanel() {
           <input
             type="date"
             value={dateFilter}
-            max={toDateKey(new Date())}
+            max={toDateKey(today())}
             onChange={(e) => handleDateFilterChange(e.target.value)}
             className="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
           />

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { thisMonth } from "@/lib/month";
 
 export function useMonthYear() {
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const now = thisMonth();
+  const [month, setMonth] = useState(now.month);
+  const [year, setYear] = useState(now.year);
   return { month, setMonth, year, setYear };
 }
 

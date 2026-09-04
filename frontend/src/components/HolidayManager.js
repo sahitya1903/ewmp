@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatDateDMY } from "@/lib/format";
+import { thisMonth } from "@/lib/month";
 
 function currentYear() {
-  return new Date().getFullYear();
+  return thisMonth().year;
 }
 
 // Shared by Admin and HR so both can keep the holiday list up to date.

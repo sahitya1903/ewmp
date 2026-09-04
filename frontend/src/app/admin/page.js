@@ -13,6 +13,7 @@ import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
 import SalaryHistorySection from "@/components/SalaryHistorySection";
 import { toDateKey } from "@/components/MonthCalendar";
+import { today } from "@/lib/month";
 import { apiFetch } from "@/lib/api";
 
 function AttendanceForm() {
@@ -20,7 +21,7 @@ function AttendanceForm() {
   const [userId, setUserId] = useState("");
   // Defaults to today — the day Admin is almost always marking — and can't go
   // past it, matching the backend's "no future-dated attendance" rule.
-  const [date, setDate] = useState(() => toDateKey(new Date()));
+  const [date, setDate] = useState(() => toDateKey(today()));
   const [status, setStatus] = useState("Present");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -76,7 +77,7 @@ function AttendanceForm() {
           <input
             type="date"
             required
-            max={toDateKey(new Date())}
+            max={toDateKey(today())}
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
