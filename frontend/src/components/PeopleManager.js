@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { formatDateDMY } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/roles";
 
 function emptyForm(defaultRole) {
@@ -169,7 +170,7 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
                   <td className="px-4 py-2">{person.phone}</td>
                   <td className="px-4 py-2">{person.monthlySalary}</td>
                   <td className="px-4 py-2">
-                    {person.joiningDate ? new Date(person.joiningDate).toLocaleDateString() : "—"}
+                    {person.joiningDate ? formatDateDMY(person.joiningDate) : "—"}
                   </td>
                   <td className="px-4 py-2">
                     {balancesByUserId[person.id]

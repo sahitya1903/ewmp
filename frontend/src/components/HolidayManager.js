@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { formatDateDMY } from "@/lib/format";
 
 function currentYear() {
   return new Date().getFullYear();
@@ -93,7 +94,7 @@ export default function HolidayManager() {
         {holidays.map((h) => (
           <li key={h._id} className="flex items-center justify-between py-2">
             <span>
-              {new Date(h.date).toLocaleDateString()} — {h.name}
+              {formatDateDMY(h.date)} — {h.name}
             </span>
             <button onClick={() => handleDelete(h._id)} className="text-red-600 underline">
               Remove

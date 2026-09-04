@@ -7,12 +7,14 @@ export const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export function formatDate(value) {
-  return new Date(value).toLocaleDateString();
-}
-
-export function formatDateLong(value) {
-  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+// The site-wide date format — dd/mm/yyyy, regardless of the browser's locale
+// (the locale-default format is ambiguous: mm/dd in some locales, dd/mm in
+// others). Every displayed date on the site should go through this.
+export function formatDateDMY(value) {
+  const d = new Date(value);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${d.getFullYear()}`;
 }
 
 export function timeAgo(value) {
@@ -24,5 +26,5 @@ export function timeAgo(value) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(value).toLocaleDateString();
+  return formatDateDMY(value);
 }

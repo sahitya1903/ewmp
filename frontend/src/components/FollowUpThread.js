@@ -1,8 +1,6 @@
 "use client";
 
-function at(value) {
-  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short" });
-}
+import { formatDateDMY } from "@/lib/format";
 
 // Renders a work-update follow-up thread: reviewer "request" lines and employee
 // "response" lines, in order.
@@ -21,7 +19,7 @@ export default function FollowUpThread({ entries }) {
             {f.kind === "request" ? "Follow-up requested" : "Employee replied"}
             {f.by ? ` · ${f.by}` : ""}
           </span>
-          <span className="ml-1 text-slate-400">{at(f.at)}</span>
+          <span className="ml-1 text-slate-400">{formatDateDMY(f.at)}</span>
           <p className="mt-0.5 whitespace-pre-line text-slate-700">{f.text}</p>
         </li>
       ))}

@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { thisMonth } from "@/lib/month";
-import { formatDate } from "@/lib/format";
+import { formatDateDMY } from "@/lib/format";
 import MonthYearPicker from "@/components/MonthYearPicker";
 import FollowUpThread from "@/components/FollowUpThread";
 import { toDateKey } from "@/components/MonthCalendar";
 
 function when(value) {
-  return new Date(value).toLocaleString(undefined, {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const time = new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${formatDateDMY(value)}, ${time}`;
 }
 
 // HR/Admin view of employee daily work updates: today's submission roster plus
@@ -180,7 +176,7 @@ export default function WorkUpdatesPanel() {
         <p className="text-sm text-slate-600">Loading...</p>
       ) : visibleUpdates.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-          {dateFilter ? `No work updates for ${formatDate(dateFilter)}.` : "No work updates for this month."}
+          {dateFilter ? `No work updates for ${formatDateDMY(dateFilter)}.` : "No work updates for this month."}
         </div>
       ) : (
         <ul className="space-y-3">
@@ -198,7 +194,7 @@ export default function WorkUpdatesPanel() {
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-slate-900">
                   {u.user ? `${u.user.name} (${u.user.employeeId})` : "—"}
-                  <span className="ml-2 font-normal text-slate-500">{formatDate(u.date)}</span>
+                  <span className="ml-2 font-normal text-slate-500">{formatDateDMY(u.date)}</span>
                   {u.awaitingResponse && (
                     <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       Follow-up pending
@@ -224,7 +220,7 @@ export default function WorkUpdatesPanel() {
                 <dt className="text-slate-500">Remaining work</dt>
                 <dd className="whitespace-pre-line text-slate-800">{u.remainingWork || "—"}</dd>
                 <dt className="text-slate-500">Est. completion</dt>
-                <dd className="text-slate-800">{u.estimatedCompletion ? formatDate(u.estimatedCompletion) : "—"}</dd>
+                <dd className="text-slate-800">{u.estimatedCompletion ? formatDateDMY(u.estimatedCompletion) : "—"}</dd>
                 {u.additionalWork && (
                   <>
                     <dt className="text-slate-500">Additional work</dt>

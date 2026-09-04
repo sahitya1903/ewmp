@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDateDMY } from "@/lib/format";
 
 const STATUS_STYLES = {
   Pending: "bg-amber-50 text-amber-800 border-amber-300",
@@ -89,8 +89,8 @@ export default function LeaveRequestsPanel() {
               {leaveRequests.map((lr) => (
                 <tr key={lr._id} className="border-t border-slate-100">
                   <td className="px-4 py-2">{lr.user?.name ?? "—"}</td>
-                  <td className="px-4 py-2">{formatDate(lr.fromDate)}</td>
-                  <td className="px-4 py-2">{formatDate(lr.toDate)}</td>
+                  <td className="px-4 py-2">{formatDateDMY(lr.fromDate)}</td>
+                  <td className="px-4 py-2">{formatDateDMY(lr.toDate)}</td>
                   <td className="px-4 py-2">{lr.reason}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLES[lr.status]}`}>

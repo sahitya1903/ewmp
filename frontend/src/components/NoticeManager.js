@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatDateLong } from "@/lib/format";
+import { formatDateDMY } from "@/lib/format";
 
 function toDateInput(value) {
   return new Date(value).toISOString().slice(0, 10);
@@ -150,7 +150,7 @@ export default function NoticeManager() {
             <div className="flex items-start justify-between gap-3">
               <h3 className="min-w-0 text-sm font-semibold text-slate-900">{n.title}</h3>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="text-xs text-slate-500">{formatDateLong(n.date)}</span>
+                <span className="text-xs text-slate-500">{formatDateDMY(n.date)}</span>
                 <button onClick={() => startEdit(n)} className="text-xs text-slate-600 underline">
                   Edit
                 </button>

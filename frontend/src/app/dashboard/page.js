@@ -8,7 +8,7 @@ import NoticeBoard from "@/components/NoticeBoard";
 import MyFollowUps from "@/components/MyFollowUps";
 import StatTile from "@/components/StatTile";
 import { apiFetch } from "@/lib/api";
-import { currency, formatDate, MONTH_NAMES } from "@/lib/format";
+import { currency, formatDateDMY, MONTH_NAMES } from "@/lib/format";
 import { thisMonth, addMonths } from "@/lib/month";
 import { useSalaries } from "@/lib/useSalaries";
 
@@ -269,7 +269,7 @@ function EmployeeDashboard() {
                 value={currency(mySalaryLastMonth.salaryPayable)}
                 sub={
                   mySalaryLastMonth.credited
-                    ? `Credited ${new Date(mySalaryLastMonth.creditedDate).toLocaleDateString()}`
+                    ? `Credited ${formatDateDMY(mySalaryLastMonth.creditedDate)}`
                     : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
                 }
               />
@@ -306,8 +306,8 @@ function EmployeeDashboard() {
                     <tbody>
                       {leaveRequests.map((lr) => (
                         <tr key={lr._id} className="border-t border-slate-100">
-                          <td className="px-3 py-2">{formatDate(lr.fromDate)}</td>
-                          <td className="px-3 py-2">{formatDate(lr.toDate)}</td>
+                          <td className="px-3 py-2">{formatDateDMY(lr.fromDate)}</td>
+                          <td className="px-3 py-2">{formatDateDMY(lr.toDate)}</td>
                           <td className="px-3 py-2">{lr.reason}</td>
                           <td className="px-3 py-2">
                             <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLES[lr.status]}`}>

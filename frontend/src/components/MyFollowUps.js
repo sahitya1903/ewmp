@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDateDMY } from "@/lib/format";
 import FollowUpThread from "@/components/FollowUpThread";
 
 // Employee-facing: active follow-up requests on any of your work updates, with a
@@ -92,7 +92,7 @@ export default function MyFollowUps() {
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
                 <span className="min-w-0 wrap-break-word text-sm font-medium text-slate-900">{u.currentProject}</span>
                 <span className="shrink-0 text-xs text-slate-500">
-                  {formatDate(u.date)} update
+                  {formatDateDMY(u.date)} update
                   {u.followUpClosed && " · closed"}
                 </span>
               </div>

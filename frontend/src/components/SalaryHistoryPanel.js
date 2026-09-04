@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { currency, MONTH_NAMES } from "@/lib/format";
+import { currency, formatDateDMY, MONTH_NAMES } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/roles";
 
 const ACTION_LABEL = {
@@ -13,13 +13,8 @@ const ACTION_LABEL = {
 
 function formatDateTime(value) {
   if (!value) return "—";
-  return new Date(value).toLocaleString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const time = new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${formatDateDMY(value)}, ${time}`;
 }
 
 // Combined salary credit history for every employee in the selected month.
