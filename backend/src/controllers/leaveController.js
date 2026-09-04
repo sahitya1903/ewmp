@@ -13,7 +13,7 @@ function fmtDay(value) {
 }
 
 function currentYear() {
-  return new Date().getFullYear();
+  return startOfDay().getUTCFullYear();
 }
 
 export async function applyLeave(req, res) {

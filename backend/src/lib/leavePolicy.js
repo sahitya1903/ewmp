@@ -1,5 +1,6 @@
 import Attendance from "../models/Attendance.js";
 import EmployeeProfile from "../models/EmployeeProfile.js";
+import { startOfDay } from "./dates.js";
 
 // Paid leave accrues at 1.75 days per completed calendar month (= 21/year),
 // credited only once a month has fully elapsed, capped at the annual total.
@@ -33,7 +34,7 @@ function accruedWholeDaysAsOf(joiningDate, asOfDate) {
 // already over; the very start of the year (nothing accrued yet), if it
 // hasn't started.
 function accrualAsOfDateForYear(year) {
-  const now = new Date();
+  const now = startOfDay();
   const currentYear = now.getUTCFullYear();
   if (year === currentYear) return now;
   if (year < currentYear) return new Date(Date.UTC(year + 1, 0, 1));

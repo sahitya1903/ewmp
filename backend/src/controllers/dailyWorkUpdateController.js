@@ -118,7 +118,7 @@ export async function listUpdates(req, res) {
 
   // Always scope to a single month — default to the current one — so this never
   // returns an employee's entire multi-year history in one response.
-  const now = new Date();
+  const now = startOfDay();
   const month = Number(req.query.month) || now.getUTCMonth() + 1;
   const year = Number(req.query.year) || now.getUTCFullYear();
   filter.date = { $gte: new Date(Date.UTC(year, month - 1, 1)), $lt: new Date(Date.UTC(year, month, 1)) };
