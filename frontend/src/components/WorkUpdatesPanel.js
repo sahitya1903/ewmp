@@ -6,6 +6,7 @@ import { thisMonth } from "@/lib/month";
 import { formatDate } from "@/lib/format";
 import MonthYearPicker from "@/components/MonthYearPicker";
 import FollowUpThread from "@/components/FollowUpThread";
+import { toDateKey } from "@/components/MonthCalendar";
 
 function when(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -22,6 +23,9 @@ export default function WorkUpdatesPanel() {
   const [cursor, setCursor] = useState(thisMonth());
   const [employees, setEmployees] = useState([]);
   const [userId, setUserId] = useState("");
+  // Narrows the fetched month down to one day; defaults to today. It's a
+  // client-side filter over the already-fetched month, not a separate query.
+  const [dateFilter, setDateFilter] = useState(() => toDateKey(new Date()));
   const [updates, setUpdates] = useState([]);
   const [todayStatuses, setTodayStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +68,27 @@ export default function WorkUpdatesPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cursor, userId]);
 
+  // Picking a day jumps the month/year picker to match it, so the fetched
+  // month always covers the chosen date.
+  function handleDateFilterChange(value) {
+    setDateFilter(value);
+    if (value) {
+      const [year, month] = value.split("-").map(Number);
+      setCursor({ year, month });
+    }
+  }
+
+  // Changing the month/year explicitly means "browse the whole month" —
+  // drop any day filter so it doesn't hide everything outside itself.
+  function handleMonthChange(month) {
+    setCursor((c) => ({ ...c, month }));
+    setDateFilter("");
+  }
+  function handleYearChange(year) {
+    setCursor((c) => ({ ...c, year }));
+    setDateFilter("");
+  }
+
   async function sendFollowUp(id) {
     setSending(true);
     setError("");
@@ -93,27 +118,46 @@ export default function WorkUpdatesPanel() {
   }
 
   const notSubmittedToday = todayStatuses.filter((s) => !s.submitted);
+  const visibleUpdates = dateFilter ? updates.filter((u) => toDateKey(u.date) === dateFilter) : updates;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <select
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
-        >
-          <option value="">All employees</option>
-          {employees.map((emp) => (
-            <option key={emp.id} value={emp.id}>
-              {emp.name} ({emp.employeeId})
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            className="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
+          >
+            <option value="">All employees</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.name} ({emp.employeeId})
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={dateFilter}
+            max={toDateKey(new Date())}
+            onChange={(e) => handleDateFilterChange(e.target.value)}
+            className="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
+          />
+          {dateFilter && (
+            <button
+              type="button"
+              onClick={() => setDateFilter("")}
+              className="text-xs text-slate-500 underline hover:text-slate-700"
+            >
+              Clear date
+            </button>
+          )}
+        </div>
         <MonthYearPicker
           month={cursor.month}
           year={cursor.year}
-          onMonthChange={(month) => setCursor((c) => ({ ...c, month }))}
-          onYearChange={(year) => setCursor((c) => ({ ...c, year }))}
+          onMonthChange={handleMonthChange}
+          onYearChange={handleYearChange}
         />
       </div>
 
@@ -134,13 +178,13 @@ export default function WorkUpdatesPanel() {
 
       {loading ? (
         <p className="text-sm text-slate-600">Loading...</p>
-      ) : updates.length === 0 ? (
+      ) : visibleUpdates.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-          No work updates for this month.
+          {dateFilter ? `No work updates for ${formatDate(dateFilter)}.` : "No work updates for this month."}
         </div>
       ) : (
         <ul className="space-y-3">
-          {updates.map((u) => (
+          {visibleUpdates.map((u) => (
             <li
               key={u.id}
               className={`rounded-lg border bg-white p-4 ${
