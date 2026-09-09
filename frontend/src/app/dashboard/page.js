@@ -234,8 +234,8 @@ function EmployeeDashboard() {
   return (
     <>
       <AccountMenu />
-      <main className="min-h-screen bg-slate-50 p-4 sm:p-10">
-        <div className="mx-auto max-w-5xl">
+      <main className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6">
+        <div className="w-full">
           <h1 className="text-xl font-semibold text-slate-900">Employee Dashboard</h1>
           <p className="mt-1 mb-6 text-sm text-slate-600">
             Your daily work update, leave, company notices, and the attendance/holiday calendar.
@@ -282,7 +282,7 @@ function EmployeeDashboard() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               {(canUse("leave") || canUse("salary")) && (
-                <div className="mb-6 grid grid-cols-2 gap-4">
+                <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(160px,240px))] gap-4">
                   {canUse("leave") && leaveBalance && (
                     <StatTile
                       label="Paid leaves remaining"
@@ -530,7 +530,7 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   return (
-    <RoleGuard deniedRoles={["Accounts_E", "Admin", "HR"]}>
+    <RoleGuard deniedCategories={["management"]}>
       <EmployeeDashboard />
     </RoleGuard>
   );

@@ -8,7 +8,7 @@ import { useRoles } from "@/lib/useRoles";
 // management (showRoleManager) — see admin/page.js and hr/page.js.
 export default function EmployeesSection({ showRoleManager = false }) {
   const { roles, loading } = useRoles();
-  const employeeRoleOptions = roles.filter((role) => role !== "Intern");
+  const employeeRoleOptions = roles.filter((role) => role.name !== "Intern").map((role) => role.name);
 
   return (
     <div className="space-y-6">

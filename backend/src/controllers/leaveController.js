@@ -6,7 +6,7 @@ import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 import { assignPaidStatusForDates, getLeaveBalance } from "../lib/leavePolicy.js";
 import { startOfDay, eachDate, isValidDate } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
-import { REVIEWER_ROLES } from "../lib/roles.js";
+import { isManagementRole } from "../lib/roleCategory.js";
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -48,7 +48,7 @@ export async function applyLeave(req, res) {
 }
 
 export async function listLeaveRequests(req, res) {
-  const isReviewer = REVIEWER_ROLES.includes(req.user.role);
+  const isReviewer = await isManagementRole(req.user.role);
   const filter = isReviewer ? {} : { user: req.user.sub };
 
   if (req.query.status) {
@@ -131,7 +131,7 @@ export async function getLeaveBalanceForUser(req, res) {
   const year = Number(req.query.year) || currentYear();
 
   let userId = req.user.sub;
-  if (REVIEWER_ROLES.includes(req.user.role) && req.query.userId) {
+  if ((await isManagementRole(req.user.role)) && req.query.userId) {
     userId = req.query.userId;
   }
 

@@ -1,4 +1,4 @@
-export const HR_CAPABILITY_LABELS = {
+export const MANAGEMENT_CAPABILITY_LABELS = {
   overview: "Overview",
   workUpdates: "Work Updates",
   employees: "Employees & Interns",
@@ -9,4 +9,4 @@ export const HR_CAPABILITY_LABELS = {
   manageRoles: "Add Custom Roles",
 };
 
-export const HR_CAPABILITY_KEYS = Object.keys(HR_CAPABILITY_LABELS);
+export const MANAGEMENT_CAPABILITY_KEYS = Object.keys(MANAGEMENT_CAPABILITY_LABELS);

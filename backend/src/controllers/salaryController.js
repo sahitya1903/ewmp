@@ -3,7 +3,7 @@ import Salary from "../models/Salary.js";
 import SalaryPayment from "../models/SalaryPayment.js";
 import { computeSalaryForUser } from "../lib/salaryCalc.js";
 import { notify } from "../lib/notify.js";
-import { REVIEWER_ROLES } from "../lib/roles.js";
+import { isManagementRole } from "../lib/roleCategory.js";
 
 function fmtUser(u) {
   return u && u._id ? { id: u._id, name: u.name, role: u.role } : null;
@@ -87,7 +87,7 @@ export async function listSalaries(req, res) {
     return res.status(400).json({ error: "month and year are required" });
   }
 
-  const isReviewer = [...REVIEWER_ROLES, "Accounts_E"].includes(req.user.role);
+  const isReviewer = await isManagementRole(req.user.role);
   const users = isReviewer
     ? await User.find({ isActive: true })
     : await User.find({ _id: req.user.sub });

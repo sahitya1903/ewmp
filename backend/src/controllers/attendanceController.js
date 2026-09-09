@@ -1,6 +1,6 @@
 import Attendance from "../models/Attendance.js";
 import DailyWorkUpdate from "../models/DailyWorkUpdate.js";
-import { REVIEWER_ROLES } from "../lib/roles.js";
+import { isManagementRole } from "../lib/roleCategory.js";
 import { startOfDay, isValidDate } from "../lib/dates.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
 
@@ -48,7 +48,7 @@ export async function listAttendance(req, res) {
 
   const filter = {};
 
-  if (!REVIEWER_ROLES.includes(req.user.role)) {
+  if (!(await isManagementRole(req.user.role))) {
     filter.user = req.user.sub;
   } else if (userId) {
     filter.user = userId;

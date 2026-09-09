@@ -75,7 +75,7 @@ export default function AttendanceOverview() {
   return (
     <div>
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,220px))] gap-4">
         <StatTile label="Employees" value={employeeCount} />
         <StatTile label="Present today" value={presentToday} />
         <StatTile label="No update yet" value={noUpdateToday} />

@@ -4,9 +4,15 @@ import { ROLE_NAMES } from "../lib/roles.js";
 import { MODULES, MODULE_KEYS, UNRESTRICTED_ROLES } from "../lib/modules.js";
 import { getEnabledModules } from "../lib/rolePermissions.js";
 
+// Every "employee" category role — built-in or custom. Management roles
+// (Admin, HR, Accounts_E, or a custom management role) are never listed
+// here; they always have full access and are configured on the management
+// capabilities panel instead.
 async function configurableRoles() {
-  const custom = await CustomRole.find().select("name");
-  return [...ROLE_NAMES, ...custom.map((r) => r.name)].filter((r) => !UNRESTRICTED_ROLES.includes(r));
+  const custom = await CustomRole.find().select("name category");
+  const builtinEmployee = ROLE_NAMES.filter((r) => !UNRESTRICTED_ROLES.includes(r));
+  const customEmployee = custom.filter((r) => r.category !== "management").map((r) => r.name);
+  return [...builtinEmployee, ...customEmployee];
 }
 
 export async function listPermissions(req, res) {
@@ -26,9 +32,6 @@ export async function updatePermissions(req, res) {
   const { role } = req.params;
   const { enabledModules } = req.body;
 
-  if (UNRESTRICTED_ROLES.includes(role)) {
-    return res.status(400).json({ error: "This role always has full access" });
-  }
   if (!Array.isArray(enabledModules) || enabledModules.some((m) => !MODULE_KEYS.includes(m))) {
     return res.status(400).json({ error: "enabledModules must be a list of valid module keys" });
   }

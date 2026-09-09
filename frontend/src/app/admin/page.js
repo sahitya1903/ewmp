@@ -13,7 +13,7 @@ import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
 import SalaryHistorySection from "@/components/SalaryHistorySection";
 import AccessControlPanel from "@/components/AccessControlPanel";
-import HrCapabilitiesPanel from "@/components/HrCapabilitiesPanel";
+import ManagementCapabilitiesPanel from "@/components/ManagementCapabilitiesPanel";
 import { toDateKey } from "@/components/MonthCalendar";
 import { today } from "@/lib/month";
 import { apiFetch } from "@/lib/api";
@@ -143,8 +143,8 @@ function AdminConsole() {
   return (
     <>
       <AccountMenu />
-      <main className="min-h-screen bg-slate-50 p-4 sm:p-10">
-        <div className="mx-auto max-w-5xl">
+      <main className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6">
+        <div className="w-full">
           <h1 className="mb-4 text-xl font-semibold text-slate-900">Admin Dashboard</h1>
 
           <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -174,7 +174,7 @@ function AdminConsole() {
           {tab === "access" && (
             <div className="space-y-6">
               <AccessControlPanel />
-              <HrCapabilitiesPanel />
+              <ManagementCapabilitiesPanel />
             </div>
           )}
         </div>
