@@ -19,10 +19,10 @@ router.use(authGuard);
 router.post("/", h(submitUpdate));
 router.get("/", h(listUpdates));
 router.get("/today", h(getTodayUpdate));
-router.get("/today-status", roleGuard("Admin", "Management"), h(listTodayStatus));
+router.get("/today-status", roleGuard("Admin", "HR"), h(listTodayStatus));
 router.get("/follow-ups", h(listMyFollowUps));
-router.post("/:id/follow-up", roleGuard("Admin", "Management"), h(requestFollowUp));
+router.post("/:id/follow-up", roleGuard("Admin", "HR"), h(requestFollowUp));
 router.post("/:id/follow-up-response", h(respondToFollowUp));
-router.post("/:id/follow-up-close", roleGuard("Admin", "Management"), h(closeFollowUp));
+router.post("/:id/follow-up-close", roleGuard("Admin", "HR"), h(closeFollowUp));
 
 export default router;

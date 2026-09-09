@@ -4,6 +4,6 @@ export const ROLE_LABELS = {
   "Social Media & Performance Marketing_E": "Social Media & Performance Marketing",
   Accounts_E: "Accounts",
   Admin: "Admin",
-  Management: "Management",
+  HR: "HR",
   Intern: "Intern",
 };

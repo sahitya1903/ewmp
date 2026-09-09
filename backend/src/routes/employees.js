@@ -13,7 +13,7 @@ const router = Router();
 
 router.use(authGuard);
 
-// Adding/editing/removing employees is common to Admin and HR (Management).
+// Adding/editing/removing employees is common to Admin and HR.
 router.get("/", roleGuard(...REVIEWER_ROLES), h(listEmployees));
 router.post("/", roleGuard(...REVIEWER_ROLES), h(createEmployee));
 router.put("/:id", roleGuard(...REVIEWER_ROLES), h(updateEmployee));

@@ -16,7 +16,7 @@ const ROLE_HOME = {
   "Social Media & Performance Marketing_E": "/dashboard",
   Accounts_E: "/accounts",
   Admin: "/admin",
-  Management: "/hr",
+  HR: "/hr",
   Intern: "/dashboard",
 };
 

@@ -41,7 +41,7 @@ const SAMPLE_USERS = [
   { employeeId: "EMP004", name: "Sneha Kulkarni", email: "smpm1@ewmp.test", role: "Social Media & Performance Marketing_E", phone: "9000000004", monthlySalary: 48000, joiningDate: "2026-08-05" },
   { employeeId: "EMP005", name: "Vikram Rao", email: "accounts1@ewmp.test", role: "Accounts_E", phone: "9000000005", monthlySalary: 52000, joiningDate: "2026-08-01" },
   { employeeId: "EMP006", name: "Neha Joshi", email: "admin1@ewmp.test", role: "Admin", phone: "9000000006", monthlySalary: 58000, joiningDate: "2026-08-01" },
-  { employeeId: "EMP007", name: "Karan Malhotra", email: "hr1@ewmp.test", role: "Management", phone: "9000000007", monthlySalary: 90000, joiningDate: "2026-08-01" },
+  { employeeId: "EMP007", name: "Karan Malhotra", email: "hr1@ewmp.test", role: "HR", phone: "9000000007", monthlySalary: 90000, joiningDate: "2026-08-01" },
   { employeeId: "INT001", name: "Ananya Verma", email: "intern1@ewmp.test", role: "Intern", phone: "9000000008", monthlySalary: 15000, joiningDate: "2026-08-10" },
   { employeeId: "INT002", name: "Rahul Singh", email: "intern2@ewmp.test", role: "Intern", phone: "9000000009", monthlySalary: 12000, joiningDate: "2026-08-15" },
 ];
@@ -347,7 +347,7 @@ async function seed() {
   // Compute every employee's salary for each month from the one they joined in
   // up to and including the current month (all recomputed live on first view —
   // these are just persisted starting values). Every *past* month is then marked
-  // credited by Admin / Management / Accounts in rotation; the current month is
+  // credited by Admin / HR / Accounts in rotation; the current month is
   // still in progress, so it stays pending.
   //
   // Where a month carried an attendance-based deduction, or where Accounts

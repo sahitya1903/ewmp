@@ -4,8 +4,8 @@ import PeopleManager from "@/components/PeopleManager";
 import RoleManager from "@/components/RoleManager";
 import { useRoles } from "@/lib/useRoles";
 
-// Adding/editing/removing employees is common to Admin and HR. Role
-// management (showRoleManager) is HR-only — see hr/page.js.
+// Adding/editing/removing employees is common to Admin and HR, as is role
+// management (showRoleManager) — see admin/page.js and hr/page.js.
 export default function EmployeesSection({ showRoleManager = false }) {
   const { roles, loading } = useRoles();
   const employeeRoleOptions = roles.filter((role) => role !== "Intern");

@@ -162,7 +162,7 @@ function AdminConsole() {
           {tab === "attendance" && <Attendance />}
           {tab === "updates" && <WorkUpdatesPanel />}
           {tab === "notices" && <NoticeManager />}
-          {tab === "employees" && <EmployeesSection />}
+          {tab === "employees" && <EmployeesSection showRoleManager />}
           {tab === "interns" && <InternsSection />}
           {tab === "salaries" && <SalariesSection />}
           {tab === "salaryHistory" && <SalaryHistorySection />}

@@ -37,12 +37,12 @@ Log in at `http://localhost:3000/login` — seeded test accounts are listed at t
 
 ## Roles
 
-One built-in role per person, set by HR/Admin. `Admin` and `Management` (HR) are the two "reviewer" roles that see and act on everyone's data.
+One built-in role per person, set by HR/Admin. `Admin` and `HR` are the two "reviewer" roles that see and act on everyone's data.
 
 | Role | Home page | Can do |
 |---|---|---|
-| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave & work updates, record salary payments, add/remove employees |
-| `Management` (HR) | `/hr` | Everything Admin can except marking attendance & posting notices; also manages custom roles |
+| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave & work updates, record salary payments, add/remove employees, add custom roles |
+| `HR` | `/hr` | Everything Admin can except marking attendance & posting notices; also adds custom roles |
 | `Accounts_E` | `/accounts` | Record salary payments, view leave balances |
 | `Developer_E`, `Cyber Security_E`, `Social Media & Performance Marketing_E`, `Intern` | `/dashboard` | Submit daily work update, apply for leave, view own calendar/salary/notifications |
 
@@ -61,7 +61,7 @@ HR/Admin can also add extra custom role names (`CustomRole`); anyone assigned on
 
 ## API reference
 
-All routes are under `/api`. Everything except the four public auth endpoints requires the `token` cookie. "Reviewer" = `Admin` + `Management`.
+All routes are under `/api`. Everything except the four public auth endpoints requires the `token` cookie. "Reviewer" = `Admin` + `HR`.
 
 | Method & path | Who | Purpose |
 |---|---|---|
@@ -74,11 +74,11 @@ All routes are under `/api`. Everything except the four public auth endpoints re
 | `POST /roles` | reviewer | add a custom role |
 | `POST /daily-work-updates` · `GET /daily-work-updates/today` | any | submit / read today's update |
 | `GET /daily-work-updates` | any (own) / reviewer (all, `?userId=`) | full update content for a month (`?month=&year=`) |
-| `GET /daily-work-updates/today-status` | Admin, Management | who has submitted today |
+| `GET /daily-work-updates/today-status` | Admin, HR | who has submitted today |
 | `GET /daily-work-updates/follow-ups` | any | own updates with an open follow-up thread (`?includeClosed=1` for all) |
-| `POST /daily-work-updates/:id/follow-up` | Admin, Management | add a follow-up request; reopens a closed thread (notifies the employee) |
+| `POST /daily-work-updates/:id/follow-up` | Admin, HR | add a follow-up request; reopens a closed thread (notifies the employee) |
 | `POST /daily-work-updates/:id/follow-up-response` | update owner | reply to an open follow-up (notifies the requester) |
-| `POST /daily-work-updates/:id/follow-up-close` | Admin, Management | end the follow-up conversation |
+| `POST /daily-work-updates/:id/follow-up-close` | Admin, HR | end the follow-up conversation |
 | `POST /leave-requests` · `GET /leave-requests` | any | apply / list (own, or all for reviewers) |
 | `GET /leave-requests/balance` | any | own accrued/used/remaining for a year |
 | `GET /leave-requests/balances` | reviewer, Accounts_E | everyone's balances |
@@ -86,7 +86,7 @@ All routes are under `/api`. Everything except the four public auth endpoints re
 | `GET /attendance` | any | attendance rows (own, or all for reviewers) |
 | `POST /attendance/mark` | Admin | mark a person Present/Absent for a working day |
 | `GET /holidays` | any | holidays for a year |
-| `POST /holidays` · `DELETE /holidays/:id` | Admin, Management | add / remove a holiday |
+| `POST /holidays` · `DELETE /holidays/:id` | Admin, HR | add / remove a holiday |
 | `GET /salaries` | any (own) / reviewer + Accounts_E (all) | computed salary rows for a month |
 | `GET /salaries/history` | reviewer, Accounts_E | combined credit history for a month |
 | `PATCH /salaries/:id/credit` | reviewer, Accounts_E | record/revise a payment (notifies the employee) |
