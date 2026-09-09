@@ -13,6 +13,7 @@ import InternsSection from "@/components/InternsSection";
 import SalariesSection from "@/components/SalariesSection";
 import SalaryHistorySection from "@/components/SalaryHistorySection";
 import AccessControlPanel from "@/components/AccessControlPanel";
+import HrCapabilitiesPanel from "@/components/HrCapabilitiesPanel";
 import { toDateKey } from "@/components/MonthCalendar";
 import { today } from "@/lib/month";
 import { apiFetch } from "@/lib/api";
@@ -170,7 +171,12 @@ function AdminConsole() {
           {tab === "salaryHistory" && <SalaryHistorySection />}
           {tab === "leaves" && <PaidLeavesSection />}
           {tab === "leave" && <LeaveRequestsPanel />}
-          {tab === "access" && <AccessControlPanel />}
+          {tab === "access" && (
+            <div className="space-y-6">
+              <AccessControlPanel />
+              <HrCapabilitiesPanel />
+            </div>
+          )}
         </div>
       </main>
     </>

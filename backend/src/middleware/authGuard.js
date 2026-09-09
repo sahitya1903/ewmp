@@ -1,5 +1,6 @@
 import { verifyToken } from "../lib/auth.js";
 import { getEnabledModules } from "../lib/rolePermissions.js";
+import { hrCanUse } from "../lib/hrAccess.js";
 
 export function authGuard(req, res, next) {
   const token = req.cookies?.token;
@@ -29,6 +30,18 @@ export function moduleGuard(moduleKey) {
     const enabled = await getEnabledModules(req.user?.role);
     if (!enabled.includes(moduleKey)) {
       return res.status(403).json({ error: "This feature isn't enabled for your role" });
+    }
+    next();
+  };
+}
+
+// Blocks HR from a console capability Admin has switched off for the role.
+// A no-op for everyone else — Admin is never restricted by this.
+export function hrCapabilityGuard(capabilityKey) {
+  return async (req, res, next) => {
+    if (req.user?.role !== "HR") return next();
+    if (!(await hrCanUse(capabilityKey))) {
+      return res.status(403).json({ error: "This feature isn't enabled for HR" });
     }
     next();
   };
