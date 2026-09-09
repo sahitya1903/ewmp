@@ -16,6 +16,7 @@ import SalaryPayment from "../src/models/SalaryPayment.js";
 import Notification from "../src/models/Notification.js";
 import Notice from "../src/models/Notice.js";
 import CustomRole from "../src/models/CustomRole.js";
+import { NO_DASHBOARD_ROLES } from "../src/lib/roles.js";
 
 const PASSWORD = "Test@1234";
 
@@ -306,7 +307,9 @@ async function seed() {
         const key = `${user._id.toString()}:${dateKey(cursor)}`;
         if (!reservedKeys.has(key)) {
           generatedAttendance.push({ user: user._id, date: new Date(cursor), status: "Present" });
-          if (!handWrittenKeys.has(key)) {
+          // Admin/HR/Accounts never submit daily work updates — see
+          // authController.me, which marks their attendance on login instead.
+          if (!handWrittenKeys.has(key) && !NO_DASHBOARD_ROLES.includes(SAMPLE_USERS[i].role)) {
             generatedUpdates.push({
               user: user._id,
               date: new Date(cursor),

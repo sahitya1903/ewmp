@@ -3,7 +3,7 @@ import Attendance from "../models/Attendance.js";
 import User from "../models/User.js";
 import { startOfDay } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
-import { REVIEWER_ROLES } from "../lib/roles.js";
+import { REVIEWER_ROLES, NO_DASHBOARD_ROLES } from "../lib/roles.js";
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -34,6 +34,13 @@ function awaitingResponse(update) {
 // what enforces the 12:00 AM–11:59 PM window — an employee can submit or
 // revise their update any time today, but never for a past or future date.
 export async function submitUpdate(req, res) {
+  // Admin/HR review everyone else's work updates, and Accounts has its own
+  // console — none of them submit their own update. Their attendance is
+  // marked on login instead (see authController.me).
+  if (NO_DASHBOARD_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ error: "This role doesn't submit daily work updates" });
+  }
+
   const { currentProject, todaysProgress, remainingWork, estimatedCompletion, additionalWork } = req.body;
 
   if (!currentProject || !todaysProgress || !remainingWork) {
@@ -87,7 +94,9 @@ export async function getTodayUpdate(req, res) {
 
 export async function listTodayStatus(req, res) {
   const today = startOfDay();
-  const users = await User.find({ isActive: true }).sort({ employeeId: 1 });
+  // Admin/HR/Accounts never submit their own update, so they'd always show
+  // as "not submitted" — exclude them rather than have the roster/counter be wrong.
+  const users = await User.find({ isActive: true, role: { $nin: NO_DASHBOARD_ROLES } }).sort({ employeeId: 1 });
   const updates = await DailyWorkUpdate.find({ date: today }).populate("followUps.by", "name");
   const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));
 
@@ -166,7 +175,7 @@ export async function listMyFollowUps(req, res) {
   res.json({ updates: updates.map((u) => toUpdateDTO(u, false)) });
 }
 
-// Admin / Management asks an employee to expand on or clarify a work update.
+// Admin / HR asks an employee to expand on or clarify a work update.
 export async function requestFollowUp(req, res) {
   const { id } = req.params;
   const { note } = req.body;

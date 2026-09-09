@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import EmployeeProfile from "../models/EmployeeProfile.js";
+import Attendance from "../models/Attendance.js";
 import {
   verifyPassword,
   signToken,
@@ -7,6 +8,9 @@ import {
   generateResetToken,
   hashResetToken,
 } from "../lib/auth.js";
+import { startOfDay } from "../lib/dates.js";
+import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
+import { NO_DASHBOARD_ROLES } from "../lib/roles.js";
 
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 30;
 
@@ -50,6 +54,23 @@ export async function login(req, res) {
 export async function me(req, res) {
   const user = await User.findById(req.user.sub).select("employeeId name email role");
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  // Admin/HR/Accounts never submit a daily work update — the action that
+  // marks everyone else Present — so mark today's attendance for them here,
+  // the first time they check their session each day. Skips weekly offs and
+  // holidays, and never overrides an existing Absent/Leave record.
+  if (NO_DASHBOARD_ROLES.includes(user.role)) {
+    const day = startOfDay();
+    const holidaySet = await getHolidaySet(day, new Date(day.getTime() + 86400000));
+    if (isWorkingDay(day, holidaySet)) {
+      await Attendance.findOneAndUpdate(
+        { user: user._id, date: day },
+        { $setOnInsert: { status: "Present", markedBy: user._id } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    }
+  }
+
   const profile = await EmployeeProfile.findOne({ user: user._id }).select("joiningDate");
   res.json({ user: { ...user.toObject(), joiningDate: profile?.joiningDate ?? null } });
 }
