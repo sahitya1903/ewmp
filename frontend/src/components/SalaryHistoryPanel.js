@@ -24,9 +24,12 @@ export default function SalaryHistoryPanel({ month, year }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
-    apiFetch(`/salaries/history?month=${month}&year=${year}`)
+    Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+      })
+      .then(() => apiFetch(`/salaries/history?month=${month}&year=${year}`))
       .then((data) => setHistory(data.history))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

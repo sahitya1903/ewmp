@@ -16,17 +16,18 @@ export function useSalaries(month, year) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiFetch(`/salaries?month=${month}&year=${year}`);
-      setSalaries(data.salaries);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  // The loading/error reset lives inside the promise chain (not synchronously
+  // before it) so this is safe to call directly from an effect.
+  function load() {
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+      })
+      .then(() => apiFetch(`/salaries?month=${month}&year=${year}`))
+      .then((data) => setSalaries(data.salaries))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {

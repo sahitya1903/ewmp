@@ -18,13 +18,10 @@ export default function HolidayManager() {
   const [saving, setSaving] = useState(false);
   const year = currentYear();
 
-  async function load() {
-    try {
-      const data = await apiFetch(`/holidays?year=${year}`);
-      setHolidays(data.holidays);
-    } catch (err) {
-      setError(err.message);
-    }
+  function load() {
+    return apiFetch(`/holidays?year=${year}`)
+      .then((data) => setHolidays(data.holidays))
+      .catch((err) => setError(err.message));
   }
 
   useEffect(() => {

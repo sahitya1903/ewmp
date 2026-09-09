@@ -17,16 +17,13 @@ export default function MyFollowUps() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await apiFetch("/daily-work-updates/follow-ups?includeClosed=1");
-      setUpdates(data.updates);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  function load() {
+    return Promise.resolve()
+      .then(() => setLoading(true))
+      .then(() => apiFetch("/daily-work-updates/follow-ups?includeClosed=1"))
+      .then((data) => setUpdates(data.updates))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {

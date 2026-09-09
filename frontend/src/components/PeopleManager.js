@@ -28,25 +28,23 @@ export default function PeopleManager({ heading, addButtonLabel, roleOptions, fi
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    setListError("");
-    try {
-      const [employeesData, balancesData] = await Promise.all([
-        apiFetch("/employees"),
-        apiFetch("/leave-requests/balances"),
-      ]);
-      setPeople(employeesData.employees.filter(filterPredicate));
-      const map = {};
-      for (const b of balancesData.balances) {
-        map[b.user.id] = b;
-      }
-      setBalancesByUserId(map);
-    } catch (err) {
-      setListError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  function load() {
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setListError("");
+      })
+      .then(() => Promise.all([apiFetch("/employees"), apiFetch("/leave-requests/balances")]))
+      .then(([employeesData, balancesData]) => {
+        setPeople(employeesData.employees.filter(filterPredicate));
+        const map = {};
+        for (const b of balancesData.balances) {
+          map[b.user.id] = b;
+        }
+        setBalancesByUserId(map);
+      })
+      .catch((err) => setListError(err.message))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {

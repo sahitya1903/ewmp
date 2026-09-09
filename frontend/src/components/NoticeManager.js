@@ -19,13 +19,10 @@ export default function NoticeManager() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function load() {
-    try {
-      const data = await apiFetch("/notices");
-      setNotices(data.notices);
-    } catch (err) {
-      setError(err.message);
-    }
+  function load() {
+    return apiFetch("/notices")
+      .then((data) => setNotices(data.notices))
+      .catch((err) => setError(err.message));
   }
 
   useEffect(() => {

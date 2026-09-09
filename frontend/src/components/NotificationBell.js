@@ -20,14 +20,15 @@ export default function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await apiFetch("/notifications");
-      setItems(data.notifications);
-      setUnread(data.unreadCount);
-    } catch {
-      /* offline / not logged in — leave state as is */
-    }
+  const load = useCallback(() => {
+    return apiFetch("/notifications")
+      .then((data) => {
+        setItems(data.notifications);
+        setUnread(data.unreadCount);
+      })
+      .catch(() => {
+        /* offline / not logged in — leave state as is */
+      });
   }, []);
 
   useEffect(() => {

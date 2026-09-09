@@ -17,18 +17,19 @@ export default function LeaveRequestsPanel() {
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [actingId, setActingId] = useState(null);
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const query = statusFilter ? `?status=${statusFilter}` : "";
-      const data = await apiFetch(`/leave-requests${query}`);
-      setLeaveRequests(data.leaveRequests);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  function load() {
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+      })
+      .then(() => {
+        const query = statusFilter ? `?status=${statusFilter}` : "";
+        return apiFetch(`/leave-requests${query}`);
+      })
+      .then((data) => setLeaveRequests(data.leaveRequests))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {

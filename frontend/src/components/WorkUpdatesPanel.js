@@ -34,23 +34,26 @@ export default function WorkUpdatesPanel() {
   const now = thisMonth();
   const isCurrentMonth = cursor.year === now.year && cursor.month === now.month;
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const q = new URLSearchParams({ month: String(cursor.month), year: String(cursor.year) });
-      if (userId) q.set("userId", userId);
-      const [updatesRes, statusRes] = await Promise.all([
-        apiFetch(`/daily-work-updates?${q.toString()}`),
-        isCurrentMonth ? apiFetch("/daily-work-updates/today-status") : Promise.resolve({ statuses: [] }),
-      ]);
-      setUpdates(updatesRes.updates);
-      setTodayStatuses(statusRes.statuses);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  function load() {
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+      })
+      .then(() => {
+        const q = new URLSearchParams({ month: String(cursor.month), year: String(cursor.year) });
+        if (userId) q.set("userId", userId);
+        return Promise.all([
+          apiFetch(`/daily-work-updates?${q.toString()}`),
+          isCurrentMonth ? apiFetch("/daily-work-updates/today-status") : Promise.resolve({ statuses: [] }),
+        ]);
+      })
+      .then(([updatesRes, statusRes]) => {
+        setUpdates(updatesRes.updates);
+        setTodayStatuses(statusRes.statuses);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
