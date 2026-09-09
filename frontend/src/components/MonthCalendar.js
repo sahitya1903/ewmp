@@ -45,8 +45,8 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
   const fullLegend = legend ? [...legend, WEEKLY_OFF_ENTRY] : legend;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="mb-2 flex items-center justify-between">
         <button
           type="button"
           onClick={onPrev}
@@ -85,7 +85,7 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
               <div
                 key={key}
                 title={entry?.label}
-                className={`flex h-16 min-w-0 flex-col items-start overflow-hidden rounded border p-1 text-left text-xs ${
+                className={`flex h-12 min-w-0 flex-col items-start overflow-hidden rounded border px-1 py-0.5 text-left text-xs ${
                   entry ? ENTRY_STYLES[entry.type] : "border-slate-100"
                 }`}
               >
@@ -100,7 +100,7 @@ export default function MonthCalendar({ year, month, onPrev, onNext, entriesByDa
       </div>
 
       {fullLegend && (
-        <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-500">
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
           {fullLegend.map((item) => (
             <span key={item.type} className="flex items-center gap-1">
               <span className={`h-2 w-2 rounded-full border ${ENTRY_STYLES[item.type]}`} />
