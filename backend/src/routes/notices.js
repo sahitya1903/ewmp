@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authGuard, roleGuard } from "../middleware/authGuard.js";
+import { authGuard, roleGuard, moduleGuard } from "../middleware/authGuard.js";
 import { listNotices, createNotice, updateNotice, deleteNotice } from "../controllers/noticeController.js";
 import { asyncHandler as h } from "../lib/asyncHandler.js";
 
@@ -7,8 +7,9 @@ const router = Router();
 
 router.use(authGuard);
 
-// Every authenticated employee can read notices; only Admin posts, edits, or removes them.
-router.get("/", h(listNotices));
+// Every authenticated employee can read notices unless Admin has switched
+// this off for their role; only Admin posts, edits, or removes them.
+router.get("/", moduleGuard("notices"), h(listNotices));
 router.post("/", roleGuard("Admin"), h(createNotice));
 router.patch("/:id", roleGuard("Admin"), h(updateNotice));
 router.delete("/:id", roleGuard("Admin"), h(deleteNotice));

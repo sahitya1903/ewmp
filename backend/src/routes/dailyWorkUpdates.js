@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authGuard, roleGuard } from "../middleware/authGuard.js";
+import { authGuard, roleGuard, moduleGuard } from "../middleware/authGuard.js";
 import {
   submitUpdate,
   getTodayUpdate,
@@ -15,6 +15,7 @@ import { asyncHandler as h } from "../lib/asyncHandler.js";
 const router = Router();
 
 router.use(authGuard);
+router.use(moduleGuard("dailyWorkUpdate"));
 
 router.post("/", h(submitUpdate));
 router.get("/", h(listUpdates));

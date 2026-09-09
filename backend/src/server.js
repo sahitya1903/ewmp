@@ -10,6 +10,7 @@ import holidayRoutes from "./routes/holidays.js";
 import salaryRoutes from "./routes/salaries.js";
 import dailyWorkUpdateRoutes from "./routes/dailyWorkUpdates.js";
 import roleRoutes from "./routes/roles.js";
+import rolePermissionRoutes from "./routes/rolePermissions.js";
 import noticeRoutes from "./routes/notices.js";
 import notificationRoutes from "./routes/notifications.js";
 
@@ -31,6 +32,7 @@ app.use("/api/holidays", holidayRoutes);
 app.use("/api/salaries", salaryRoutes);
 app.use("/api/daily-work-updates", dailyWorkUpdateRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/role-permissions", rolePermissionRoutes);
 app.use("/api/notices", noticeRoutes);
 app.use("/api/notifications", notificationRoutes);
 

@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { currency, formatDateDMY, MONTH_NAMES } from "@/lib/format";
 import { thisMonth, addMonths, today } from "@/lib/month";
 import { useSalaries } from "@/lib/useSalaries";
+import { MODULE_KEYS } from "@/lib/modules";
 
 const STATUS_STYLES = {
   Pending: "bg-amber-50 text-amber-800 border-amber-300",
@@ -29,6 +30,12 @@ const EMPTY_UPDATE_FORM = {
 };
 
 function EmployeeDashboard() {
+  // Defaults to fully enabled so nothing flashes hidden while this loads;
+  // corrected as soon as Admin's Access Control settings for this role come back.
+  const [enabledModules, setEnabledModules] = useState(MODULE_KEYS);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const canUse = (moduleKey) => enabledModules.includes(moduleKey);
+
   const [cursor, setCursor] = useState(thisMonth());
   const [entriesByDate, setEntriesByDate] = useState({});
   const [calendarLoading, setCalendarLoading] = useState(true);
@@ -56,91 +63,104 @@ function EmployeeDashboard() {
   const [updateError, setUpdateError] = useState("");
   const [updateSaving, setUpdateSaving] = useState(false);
 
-  async function loadCalendar() {
-    setCalendarLoading(true);
-    try {
-      const [holidaysRes, attendanceRes, noticesRes] = await Promise.all([
-        apiFetch(`/holidays?year=${cursor.year}`),
-        apiFetch(`/attendance?month=${cursor.month}&year=${cursor.year}`),
-        apiFetch(`/notices?year=${cursor.year}`),
-      ]);
-
-      const map = {};
-      for (const h of holidaysRes.holidays) {
-        const key = toDateKey(h.date);
-        if (new Date(h.date).getUTCMonth() + 1 === cursor.month) {
-          map[key] = { type: "holiday", label: h.name };
+  function loadCalendar() {
+    return Promise.resolve()
+      .then(() => setCalendarLoading(true))
+      .then(() =>
+        Promise.all([
+          apiFetch(`/holidays?year=${cursor.year}`),
+          canUse("attendance") ? apiFetch(`/attendance?month=${cursor.month}&year=${cursor.year}`) : { attendance: [] },
+          canUse("notices") ? apiFetch(`/notices?year=${cursor.year}`) : { notices: [] },
+        ])
+      )
+      .then(([holidaysRes, attendanceRes, noticesRes]) => {
+        const map = {};
+        for (const h of holidaysRes.holidays) {
+          const key = toDateKey(h.date);
+          if (new Date(h.date).getUTCMonth() + 1 === cursor.month) {
+            map[key] = { type: "holiday", label: h.name };
+          }
         }
-      }
-      for (const n of noticesRes.notices) {
-        const key = toDateKey(n.date);
-        if (new Date(n.date).getUTCMonth() + 1 === cursor.month && !map[key]) {
-          map[key] = { type: "notice", label: n.title };
+        for (const n of noticesRes.notices) {
+          const key = toDateKey(n.date);
+          if (new Date(n.date).getUTCMonth() + 1 === cursor.month && !map[key]) {
+            map[key] = { type: "notice", label: n.title };
+          }
         }
-      }
-      for (const a of attendanceRes.attendance) {
-        map[toDateKey(a.date)] = { type: ATTENDANCE_TYPE[a.status] ?? "present", label: a.status };
-      }
-
-      setEntriesByDate(map);
-    } catch {
-      setEntriesByDate({});
-    } finally {
-      setCalendarLoading(false);
-    }
+        for (const a of attendanceRes.attendance) {
+          map[toDateKey(a.date)] = { type: ATTENDANCE_TYPE[a.status] ?? "present", label: a.status };
+        }
+        setEntriesByDate(map);
+      })
+      .catch(() => setEntriesByDate({}))
+      .finally(() => setCalendarLoading(false));
   }
 
-  async function loadTodayUpdate() {
-    try {
-      const data = await apiFetch("/daily-work-updates/today");
-      setTodayUpdate(data.update);
-    } catch {
-      setTodayUpdate(null);
-    }
+  function loadTodayUpdate() {
+    return apiFetch("/daily-work-updates/today")
+      .then((data) => setTodayUpdate(data.update))
+      .catch(() => setTodayUpdate(null));
   }
 
   // If an admin has already marked today's attendance directly, the employee
   // doesn't need to be nagged for a work update — Absent/Leave can't take one
   // anyway (the API rejects it), and an admin-marked Present already accounts
   // for the day.
-  async function loadTodayAttendance() {
-    try {
-      const { year, month } = thisMonth();
-      const data = await apiFetch(`/attendance?month=${month}&year=${year}`);
-      const todayKey = toDateKey(today());
-      const record = data.attendance.find((a) => toDateKey(a.date) === todayKey);
-      setTodayAttendance(record?.status ?? null);
-    } catch {
-      setTodayAttendance(null);
+  function loadTodayAttendance() {
+    if (!canUse("attendance")) {
+      return Promise.resolve().then(() => setTodayAttendance(null));
     }
+    const { year, month } = thisMonth();
+    return apiFetch(`/attendance?month=${month}&year=${year}`)
+      .then((data) => {
+        const todayKey = toDateKey(today());
+        const record = data.attendance.find((a) => toDateKey(a.date) === todayKey);
+        setTodayAttendance(record?.status ?? null);
+      })
+      .catch(() => setTodayAttendance(null));
   }
 
-  async function loadLeaveRequests() {
-    setLeaveLoading(true);
-    setListError("");
-    try {
-      const data = await apiFetch("/leave-requests");
-      setLeaveRequests(data.leaveRequests);
-    } catch (err) {
-      setListError(err.message);
-    } finally {
-      setLeaveLoading(false);
-    }
+  function loadLeaveRequests() {
+    return Promise.resolve()
+      .then(() => {
+        setLeaveLoading(true);
+        setListError("");
+      })
+      .then(() => apiFetch("/leave-requests"))
+      .then((data) => setLeaveRequests(data.leaveRequests))
+      .catch((err) => setListError(err.message))
+      .finally(() => setLeaveLoading(false));
   }
 
   useEffect(() => {
+    apiFetch("/role-permissions/mine")
+      .then((data) => setEnabledModules(data.enabledModules))
+      .catch(() => setEnabledModules(MODULE_KEYS))
+      .finally(() => setPermissionsLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (!permissionsLoaded) return;
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor]);
+  }, [cursor, permissionsLoaded]);
 
   useEffect(() => {
-    loadLeaveRequests();
-    loadTodayUpdate();
+    if (!permissionsLoaded) return;
+    if (canUse("leave")) {
+      loadLeaveRequests();
+      apiFetch("/leave-requests/balance")
+        .then(setLeaveBalance)
+        .catch(() => setLeaveBalance(null));
+    } else {
+      Promise.resolve().then(() => setLeaveLoading(false));
+    }
+    if (canUse("dailyWorkUpdate")) {
+      loadTodayUpdate();
+    }
     loadTodayAttendance();
-    apiFetch("/leave-requests/balance")
-      .then(setLeaveBalance)
-      .catch(() => setLeaveBalance(null));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionsLoaded]);
 
   function openUpdateForm() {
     setUpdateForm(
@@ -222,110 +242,120 @@ function EmployeeDashboard() {
             Notifications appear in the bell at the top right.
           </p>
 
-          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
-              {todayUpdate ? (
-                <p className="mt-1 text-sm text-slate-600">
-                  <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.currentProject}
-                </p>
-              ) : todayAttendance === "Absent" ? (
-                <p className="mt-1 text-sm text-slate-600">
-                  Marked <span className="font-medium text-red-700">Absent</span> today by Admin — no work update needed.
-                </p>
-              ) : todayAttendance === "Leave" ? (
-                <p className="mt-1 text-sm text-slate-600">You&apos;re on approved leave today — no work update needed.</p>
-              ) : todayAttendance === "Present" ? (
-                <p className="mt-1 text-sm text-slate-600">
-                  Marked <span className="font-medium text-emerald-700">Present</span> today by Admin — a work update is optional.
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
-              )}
-            </div>
-            {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
-              <button
-                onClick={openUpdateForm}
-                className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
-              >
-                {todayUpdate ? "Edit update" : "Submit update"}
-              </button>
-            )}
-          </div>
+          {canUse("dailyWorkUpdate") && (
+            <>
+              <div className="mb-6 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
+                  {todayUpdate ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.currentProject}
+                    </p>
+                  ) : todayAttendance === "Absent" ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Marked <span className="font-medium text-red-700">Absent</span> today by Admin — no work update needed.
+                    </p>
+                  ) : todayAttendance === "Leave" ? (
+                    <p className="mt-1 text-sm text-slate-600">You&apos;re on approved leave today — no work update needed.</p>
+                  ) : todayAttendance === "Present" ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Marked <span className="font-medium text-emerald-700">Present</span> today by Admin — a work update is optional.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
+                  )}
+                </div>
+                {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
+                  <button
+                    onClick={openUpdateForm}
+                    className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
+                  >
+                    {todayUpdate ? "Edit update" : "Submit update"}
+                  </button>
+                )}
+              </div>
 
-          <MyFollowUps />
+              <MyFollowUps />
+            </>
+          )}
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <div className="mb-6 grid grid-cols-2 gap-4">
-                {leaveBalance && (
-                  <StatTile
-                    label="Paid leaves remaining"
-                    value={`${leaveBalance.remaining}`}
-                    sub={`${leaveBalance.accrued} accrued of ${leaveBalance.quota}/year`}
-                  />
-                )}
-                {mySalaryLastMonth && (
-                  <StatTile
-                    label="Last month's salary"
-                    value={currency(mySalaryLastMonth.salaryPayable)}
-                    sub={
-                      mySalaryLastMonth.credited
-                        ? `Credited ${formatDateDMY(mySalaryLastMonth.creditedDate)}`
-                        : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
-                    }
-                  />
-                )}
-              </div>
+              {(canUse("leave") || canUse("salary")) && (
+                <div className="mb-6 grid grid-cols-2 gap-4">
+                  {canUse("leave") && leaveBalance && (
+                    <StatTile
+                      label="Paid leaves remaining"
+                      value={`${leaveBalance.remaining}`}
+                      sub={`${leaveBalance.accrued} accrued of ${leaveBalance.quota}/year`}
+                    />
+                  )}
+                  {canUse("salary") && mySalaryLastMonth && (
+                    <StatTile
+                      label="Last month's salary"
+                      value={currency(mySalaryLastMonth.salaryPayable)}
+                      sub={
+                        mySalaryLastMonth.credited
+                          ? `Credited ${formatDateDMY(mySalaryLastMonth.creditedDate)}`
+                          : `${MONTH_NAMES[lastMonth.month - 1]} ${lastMonth.year} — not yet credited`
+                      }
+                    />
+                  )}
+                </div>
+              )}
 
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">My Leave Requests</h2>
-                <button
-                  onClick={openForm}
-                  className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-                >
-                  Apply for leave
-                </button>
-              </div>
+              {canUse("leave") && (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-slate-900">My Leave Requests</h2>
+                    <button
+                      onClick={openForm}
+                      className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+                    >
+                      Apply for leave
+                    </button>
+                  </div>
 
-              {listError && <p className="mb-3 text-sm text-red-600">{listError}</p>}
+                  {listError && <p className="mb-3 text-sm text-red-600">{listError}</p>}
 
-              {leaveLoading ? (
-                <p className="text-sm text-slate-600">Loading...</p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-600">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">From</th>
-                        <th className="px-3 py-2 font-medium">To</th>
-                        <th className="px-3 py-2 font-medium">Reason</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaveRequests.map((lr) => (
-                        <tr key={lr._id} className="border-t border-slate-100">
-                          <td className="px-3 py-2">{formatDateDMY(lr.fromDate)}</td>
-                          <td className="px-3 py-2">{formatDateDMY(lr.toDate)}</td>
-                          <td className="px-3 py-2">{lr.reason}</td>
-                          <td className="px-3 py-2">
-                            <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLES[lr.status]}`}>
-                              {lr.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                      {leaveRequests.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="px-3 py-6 text-center text-slate-500">
-                            No leave requests yet.
+                  {leaveLoading ? (
+                    <p className="text-sm text-slate-600">Loading...</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">From</th>
+                            <th className="px-3 py-2 font-medium">To</th>
+                            <th className="px-3 py-2 font-medium">Reason</th>
+                            <th className="px-3 py-2 font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaveRequests.map((lr) => (
+                            <tr key={lr._id} className="border-t border-slate-100">
+                              <td className="px-3 py-2">{formatDateDMY(lr.fromDate)}</td>
+                              <td className="px-3 py-2">{formatDateDMY(lr.toDate)}</td>
+                              <td className="px-3 py-2">{lr.reason}</td>
+                              <td className="px-3 py-2">
+                                <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLES[lr.status]}`}>
+                                  {lr.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {leaveRequests.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-3 py-6 text-center text-slate-500">
+                                No leave requests yet.
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
+              )}
+                </>
               )}
             </div>
 
@@ -340,19 +370,25 @@ function EmployeeDashboard() {
                 entriesByDate={entriesByDate}
                 legend={[
                   { type: "holiday", label: "Holiday" },
-                  { type: "notice", label: "Notice / Meeting" },
-                  { type: "present", label: "Present" },
-                  { type: "absent", label: "Absent" },
-                  { type: "leave", label: "Leave" },
+                  ...(canUse("notices") ? [{ type: "notice", label: "Notice / Meeting" }] : []),
+                  ...(canUse("attendance")
+                    ? [
+                        { type: "present", label: "Present" },
+                        { type: "absent", label: "Absent" },
+                        { type: "leave", label: "Leave" },
+                      ]
+                    : []),
                 ]}
               />
             </div>
           </div>
 
-          <div className="mt-6">
-            <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
-            <NoticeBoard />
-          </div>
+          {canUse("notices") && (
+            <div className="mt-6">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
+              <NoticeBoard />
+            </div>
+          )}
         </div>
 
         {formOpen && (
@@ -494,7 +530,7 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   return (
-    <RoleGuard deniedRoles={["Accounts_E", "Admin", "Management"]}>
+    <RoleGuard deniedRoles={["Accounts_E", "Admin", "HR"]}>
       <EmployeeDashboard />
     </RoleGuard>
   );

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authGuard, roleGuard } from "../middleware/authGuard.js";
+import { authGuard, roleGuard, moduleGuard } from "../middleware/authGuard.js";
 import {
   applyLeave,
   listLeaveRequests,
@@ -13,6 +13,7 @@ import { asyncHandler as h } from "../lib/asyncHandler.js";
 const router = Router();
 
 router.use(authGuard);
+router.use(moduleGuard("leave"));
 
 router.post("/", h(applyLeave));
 router.get("/", h(listLeaveRequests));
