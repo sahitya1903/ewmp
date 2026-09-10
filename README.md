@@ -37,60 +37,76 @@ Log in at `http://localhost:3000/login` — seeded test accounts are listed at t
 
 ## Roles
 
-One built-in role per person, set by HR/Admin. `Admin` and `HR` are the two "reviewer" roles that see and act on everyone's data.
+Every role has a **category** — `management` or `employee` — that decides its landing page and how its access is configured.
 
-| Role | Home page | Can do |
-|---|---|---|
-| `Admin` | `/admin` | Mark attendance, manage holidays & notices, review leave & work updates, record salary payments, add/remove employees, add custom roles |
-| `HR` | `/hr` | Everything Admin can except marking attendance & posting notices; also adds custom roles |
-| `Accounts_E` | `/accounts` | Record salary payments, view leave balances |
-| `Developer_E`, `Cyber Security_E`, `Social Media & Performance Marketing_E`, `Intern` | `/dashboard` | Submit daily work update, apply for leave, view own calendar/salary/notifications |
+| Category | Built-in roles | Landing page | Access configured via |
+|---|---|---|---|
+| `management` | `Admin`, `HR`, `Accounts_E` | a multi-tab **console** | **Management Role Capabilities** panel (Admin only) |
+| `employee` | `Developer_E`, `Cyber Security_E`, `Social Media & Performance Marketing_E`, `Intern` | `/dashboard` | **Access Control** panel (Admin only) |
 
-HR/Admin can also add extra custom role names (`CustomRole`); anyone assigned one lands on `/dashboard`.
+**Employee roles** land on `/dashboard`. Admin picks, per role, which feature modules that role sees: Daily Work Updates, Leave Requests, Attendance & Calendar, Salary, Notices & Meetings. A role with no explicit config has all five.
+
+**Management roles** get a console. `Admin` (`/admin`), `HR` (`/hr`), and `Accounts_E` (`/accounts`) have dedicated pages; a custom management role has no bespoke route, so it lands on a generic console at `/<slug-of-its-name>` (see `frontend/src/app/[roleSlug]/page.js`). For every management role *except Admin*, Admin picks which console tabs show up: Overview, Work Updates, Employees & Interns, Salaries, Salary History, Paid Leaves, Leave Requests, Add Custom Roles.
+
+`Admin` always has full access and is not configurable. Three things are Admin-only and never delegable: marking attendance directly, posting notices, and the Access Control / Management Role Capabilities panels themselves.
+
+Custom roles are added at runtime by any management role that has the **Add Custom Roles** capability (`HR` has it by default; `Accounts_E` does not). Each is created with a category. A new **management** custom role starts with *no* capabilities until Admin grants some; a new **employee** custom role starts with all modules. Defaults preserve prior behaviour: `HR` keeps every capability, `Accounts_E` keeps Salaries + Salary History + Paid Leaves.
 
 ## Modules
 
-- **Auth** — credential login (JWT + bcrypt), change password, forgot/reset password (reset links are logged to the console; no email provider wired up).
-- **Employees & roles** — HR/Admin CRUD over people and their profile (phone, monthly salary, joining date). Deleting a person cascades to all their attendance/leave/salary/notification records.
-- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. HR/Admin see every submission in full on a **Work Updates** tab, browsable by month and employee (each day's entry is kept, and a same-day edit is flagged). A reviewer can start a **follow-up thread** on any update; the employee replies from a "Follow-up requests" card on their dashboard (active threads only, with a toggle for past ones), and each side is notified. The reviewer closes the thread to end it (a new request reopens it). Requests and replies are appended — editing the update never drops the thread.
-- **Leave & attendance** — apply for leave (today or later), HR/Admin approve/reject, Admin marks Present/Absent directly. Approved leave writes `Leave` attendance rows. Paid leave **accrues 1.75 days per completed month (21/year)**, capped annually; days beyond the accrued balance are unpaid.
-- **Holidays & calendar** — HR/Admin maintain the holiday list; the shared `MonthCalendar` overlays holidays, notices, and (on the employee view) that person's attendance. The weekly off is Monday.
-- **Salary** — `salaryPayable` is derived from attendance: `dailySalary × (days in month − absent − unpaid-leave − pre-joining days)`. HR/Admin/Accounts record the amount actually credited plus an optional remark; edits keep the original crediter and stamp the reviser, and every credit/revision is logged. The **Salary History** tab shows the whole team's credit activity for a month.
-- **Notices & meetings** — Admin posts a dated notice or meeting link; it shows on every calendar and in a "Notices & Meetings" panel, and fans an announcement notification out to everyone.
+- **Auth** — credential login (JWT + bcrypt), change password, forgot/reset password (reset links are logged to the console; no email provider wired up). `GET /auth/me` also returns the caller's category and joining date.
+- **Roles & access control** — any management role with the *Add Custom Roles* capability can add custom role names (`CustomRole`), each tagged `management` or `employee`. Admin gates employee-role features on the **Access Control** panel (`RolePermission` per employee role) and management-role console tabs on the **Management Role Capabilities** panel (`ManagementCapability` per management role). Both are enforced server-side by `moduleGuard` / `managementCapabilityGuard` and mirrored client-side so hidden tabs never flash.
+- **Employees & profiles** — management roles with the *Employees* capability CRUD people and their profile (phone, monthly salary, joining date). Deleting a person cascades to all their attendance/leave/salary/notification records. The directory (`GET /employees`) is readable by any management role — other tabs reuse it as shared lookup data.
+- **Daily work updates** — one submission per day per person (project, progress, remaining work, ETA, extra work), enforced to the server's "today". Submitting also marks the day Present. Management roles with the *Work Updates* capability see every submission in full on a **Work Updates** tab, browsable by month and employee (each day's entry is kept, and a same-day edit is flagged). A reviewer can start a **follow-up thread** on any update; the employee replies from a "Follow-up requests" card on their dashboard (active threads only, with a toggle for past ones), and each side is notified. The reviewer closes the thread to end it (a new request reopens it). Requests and replies are appended — editing the update never drops the thread. `Admin`, `HR`, and `Accounts_E` never submit updates themselves — their attendance is marked on login instead.
+- **Leave & attendance** — apply for leave (today or later); management roles with the *Leave Requests* capability approve/reject; only `Admin` marks Present/Absent directly. Approved leave writes `Leave` attendance rows. Paid leave **accrues 1.75 days per completed month (21/year)**, capped annually; days beyond the accrued balance are unpaid. Any management role can read everyone's leave balances (`GET /leave-requests/balances`) to cross-check payroll.
+- **Holidays & calendar** — `Admin` and `HR` maintain the holiday list; the shared `MonthCalendar` overlays holidays, notices, and (on the employee view) that person's attendance. The weekly off is Monday.
+- **Salary** — `salaryPayable` is derived from attendance: `dailySalary × (days in month − absent − unpaid-leave − pre-joining days)`. Management roles with the *Salaries* capability record the amount actually credited plus an optional remark; edits keep the original crediter and stamp the reviser, and every credit/revision is logged. The **Salary History** tab (its own capability) shows the whole team's credit activity for a month.
+- **Notices & meetings** — only `Admin` posts a dated notice or meeting link; it shows on every calendar and in a "Notices & Meetings" panel (rendered on the console's first tab and the employee dashboard), and fans an announcement notification out to everyone.
 - **Notifications** — a bell in the account bar with an unread count and feed. Emitted on leave decisions, salary credits/revisions, new/edited notices, and follow-up requests. Meeting reminders for notices landing today/tomorrow are generated lazily when the feed is fetched (there's no scheduler).
 
 ## API reference
 
-All routes are under `/api`. Everything except the four public auth endpoints requires the `token` cookie. "Reviewer" = `Admin` + `HR`.
+All routes are under `/api`. Everything except the four public auth endpoints requires the `token` cookie.
+
+**"Who" column:**
+
+- **any** — any authenticated user, own data only
+- **management** — any management-category role. `Admin` always passes; `HR` / `Accounts_E` / a custom management role also need the *italicised capability* enabled by Admin
+- **Admin** — `Admin` only
+- an *italicised module* means an employee role additionally needs that Access Control module switched on (a no-op for management roles, which always have every module)
 
 | Method & path | Who | Purpose |
 |---|---|---|
 | `POST /auth/login` · `POST /auth/logout` | public | start / end a session |
-| `GET /auth/me` | any | current user + role |
+| `GET /auth/me` | any | current user + role + category + joining date |
 | `POST /auth/change-password` | any | change own password |
 | `POST /auth/forgot-password` · `POST /auth/reset-password` | public | password reset by emailed/logged token |
-| `GET /employees` · `POST /employees` · `PUT /employees/:id` · `DELETE /employees/:id` | reviewer | employee CRUD |
-| `GET /roles` | any | built-in + custom role names |
-| `POST /roles` | reviewer | add a custom role |
-| `POST /daily-work-updates` · `GET /daily-work-updates/today` | any | submit / read today's update |
-| `GET /daily-work-updates` | any (own) / reviewer (all, `?userId=`) | full update content for a month (`?month=&year=`) |
-| `GET /daily-work-updates/today-status` | Admin, HR | who has submitted today |
-| `GET /daily-work-updates/follow-ups` | any | own updates with an open follow-up thread (`?includeClosed=1` for all) |
-| `POST /daily-work-updates/:id/follow-up` | Admin, HR | add a follow-up request; reopens a closed thread (notifies the employee) |
+| `GET /roles` | any | built-in + custom role names, each with its category |
+| `POST /roles` | management + *Add Custom Roles* | add a custom role (`management` or `employee`) |
+| `GET /role-permissions/mine` | any | feature modules enabled for the caller's role |
+| `GET /role-permissions` · `PUT /role-permissions/:role` | Admin | view / set per-employee-role module access |
+| `GET /management-capabilities/mine` | any | console capabilities granted to the caller's role |
+| `GET /management-capabilities` · `PUT /management-capabilities/:role` | Admin | view / set per-management-role console capabilities |
+| `GET /employees` | management | employee directory (shared lookup) |
+| `POST /employees` · `PUT /employees/:id` · `DELETE /employees/:id` | management + *Employees* | employee CRUD (delete cascades) |
+| `POST /daily-work-updates` · `GET /daily-work-updates/today` | any + *dailyWorkUpdate* | submit / read own update for today |
+| `GET /daily-work-updates` | own: any · all (`?userId=&month=&year=`): management + *Work Updates* | full update content for a month |
+| `GET /daily-work-updates/today-status` | management + *Work Updates* | who has submitted today |
+| `GET /daily-work-updates/follow-ups` | any | own updates with an open follow-up (`?includeClosed=1` for all) |
+| `POST /daily-work-updates/:id/follow-up` · `POST /daily-work-updates/:id/follow-up-close` | management + *Work Updates* | open / close a follow-up thread (notifies the employee) |
 | `POST /daily-work-updates/:id/follow-up-response` | update owner | reply to an open follow-up (notifies the requester) |
-| `POST /daily-work-updates/:id/follow-up-close` | Admin, HR | end the follow-up conversation |
-| `POST /leave-requests` · `GET /leave-requests` | any | apply / list (own, or all for reviewers) |
-| `GET /leave-requests/balance` | any | own accrued/used/remaining for a year |
-| `GET /leave-requests/balances` | reviewer, Accounts_E | everyone's balances |
-| `PATCH /leave-requests/:id/status` | reviewer | approve / reject (notifies the employee) |
-| `GET /attendance` | any | attendance rows (own, or all for reviewers) |
+| `POST /leave-requests` · `GET /leave-requests/balance` | any + *leave* | apply / own accrued-used-remaining for a year |
+| `GET /leave-requests` | own: any · all: management + *Leave Requests* | list leave requests |
+| `GET /leave-requests/balances` | management | everyone's balances |
+| `PATCH /leave-requests/:id/status` | management + *Leave Requests* | approve / reject (notifies the employee) |
+| `GET /attendance` | own: any + *attendance* · all: management + *Overview* | attendance rows |
 | `POST /attendance/mark` | Admin | mark a person Present/Absent for a working day |
 | `GET /holidays` | any | holidays for a year |
 | `POST /holidays` · `DELETE /holidays/:id` | Admin, HR | add / remove a holiday |
-| `GET /salaries` | any (own) / reviewer + Accounts_E (all) | computed salary rows for a month |
-| `GET /salaries/history` | reviewer, Accounts_E | combined credit history for a month |
-| `PATCH /salaries/:id/credit` | reviewer, Accounts_E | record/revise a payment (notifies the employee) |
-| `GET /notices` | any | notices (optionally filtered by year) |
+| `GET /salaries` | own: any · all: management + *Salaries* (all under *salary*) | computed salary rows for a month |
+| `GET /salaries/history` | management + *Salary History* | combined credit history for a month |
+| `PATCH /salaries/:id/credit` | management + *Salaries* | record / revise a payment (notifies the employee) |
+| `GET /notices` | any + *notices* | notices (optionally filtered by year) |
 | `POST /notices` · `PATCH /notices/:id` · `DELETE /notices/:id` | Admin | manage notices (create/edit fans out notifications) |
 | `GET /notifications` | any | own feed + `unreadCount` (also materialises due reminders) |
 | `PATCH /notifications/:id/read` · `POST /notifications/read-all` | any | mark read |
@@ -99,9 +115,12 @@ All routes are under `/api`. Everything except the four public auth endpoints re
 
 MongoDB collections (all in `backend/src/models/`):
 
-`User` · `EmployeeProfile` · `CustomRole` · `DailyWorkUpdate` · `LeaveRequest` · `Attendance` · `Holiday` · `Salary` · `SalaryPayment` · `Notice` · `Notification`
+`User` · `EmployeeProfile` · `CustomRole` · `RolePermission` · `ManagementCapability` · `DailyWorkUpdate` · `LeaveRequest` · `Attendance` · `Holiday` · `Salary` · `SalaryPayment` · `Notice` · `Notification`
 
-`Salary` rows are recomputed from attendance on every read (`computeSalaryForUser`), so they're a cache, not a source of truth. `SalaryPayment` holds the human-entered "what we actually paid" plus its edit history.
+- `CustomRole` — a runtime-added role name plus its `category` (`management` / `employee`).
+- `RolePermission` — one doc per employee role, holding which feature modules are enabled. No doc = all modules on.
+- `ManagementCapability` — one doc per management role, holding which console tabs Admin has granted. No doc = the role's built-in default (`HR` all, `Accounts_E` three).
+- `Salary` rows are recomputed from attendance on every read (`computeSalaryForUser`), so they're a cache, not a source of truth. `SalaryPayment` holds the human-entered "what we actually paid" plus its edit history.
 
 ## Project layout
 
@@ -111,30 +130,35 @@ backend/src/
   routes/            one file per resource, wires guards to controllers
   controllers/       request handlers
   models/            Mongoose schemas
-  lib/               auth, db, dates, roles, notify/reminders,
+  lib/               auth, db, dates; roles + categories + URL slugs;
+                     module/capability access resolution; notify/reminders;
                      workingDays, leavePolicy, salaryCalc
-  middleware/        authGuard (cookie → req.user), roleGuard
-  scripts/seed.mjs   wipe + reload demo data
+  middleware/        authGuard.js — cookie→req.user, plus role / module / capability guards
+  scripts/           seed.mjs (wipe + reload demo data),
+                     copy-to-railway.mjs (clone a DB), sync-indexes.mjs (rebuild indexes)
 
 frontend/src/
-  app/               one folder per route (login, dashboard, admin, hr, accounts, …)
-  components/         shared UI (SalaryTable, MonthCalendar, NotificationBell, …)
-  lib/               api fetch wrapper, format/month helpers, hooks (useSalaries, useRoles)
-  middleware.js       redirects unauthenticated users away from protected prefixes
+  app/               one folder per route (login, dashboard, admin, hr, accounts, …);
+                     [roleSlug]/ is the generic console for custom management roles
+  components/         shared UI (ManagementConsole, AccessControlPanel,
+                     ManagementCapabilitiesPanel, SalaryTable, MonthCalendar, …)
+  lib/               api fetch wrapper, format/month helpers, role/module label maps,
+                     hooks (useSalaries, useRoles, useRolePermissions, useManagementCapabilities)
+  proxy.js           redirects unauthenticated users away from non-public pages
 ```
 
 ## How auth flows
 
 1. `frontend` posts credentials to `backend`'s `POST /api/auth/login`, `credentials: "include"`.
-2. `backend` verifies the password, signs a JWT, and sets it as an httpOnly cookie.
-3. `frontend/src/middleware.js` only checks that the cookie is *present* before allowing `/dashboard`, `/accounts`, `/admin`, `/hr`, `/change-password` — it can't verify the signature (the `JWT_SECRET` lives only in `backend`).
-4. Each protected page wraps its content in `<RoleGuard allowedRoles={[...]}>`, which calls `backend`'s `GET /api/auth/me` client-side to confirm the actual role and redirects to `/login` if it doesn't match.
+2. `backend` verifies the password, signs a JWT, sets it as an httpOnly cookie, and returns `redirectTo` — the role's landing page (`/admin`, `/hr`, `/accounts`, `/dashboard`, or `/<slug>` for a custom management role).
+3. `frontend/src/proxy.js` (Next's request middleware, renamed from `middleware.js` per the Next 16 deprecation) only checks that the cookie is *present* — it can't verify the signature (`JWT_SECRET` lives only in `backend`). It's exclusion-based: everything except `/`, `/login`, `/forgot-password`, `/reset-password` (and Next's assets and `/api/*`) needs the cookie, so a custom role's unknown URL slug is still protected.
+4. Each protected page wraps its content in `<RoleGuard>` — by `allowedRoles`, `deniedRoles`, or `deniedCategories` (e.g. `/dashboard` denies the whole `management` category) — which calls `GET /api/auth/me` client-side to confirm the real role/category and redirects to `/login` if it doesn't match. Console tabs and dashboard modules are then filtered by `GET /api/*/mine`.
 
 ## Deployment
 
-Frontend on Vercel (root dir `frontend`), backend + MongoDB on one Railway project (backend root dir `backend`).
+Frontend on Vercel (root dir `frontend`), backend + MongoDB on one Railway project (backend root dir `backend`). Full runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-The frontend serves the backend at a same-origin path so the auth cookie stays first-party: set **`BACKEND_URL`** (e.g. `https://api.up.railway.app`, no `NEXT_PUBLIC_` prefix) on Vercel and `NEXT_PUBLIC_API_URL=/api`; `next.config.mjs` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`. Locally `BACKEND_URL` is unset and `apiFetch` calls the backend directly.
+The frontend serves the backend at a same-origin path so the auth cookie stays first-party: set **`BACKEND_URL`** (e.g. `https://api.up.railway.app`, no `NEXT_PUBLIC_` prefix, no trailing slash) on Vercel and `NEXT_PUBLIC_API_URL=/api`; `next.config.mjs` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`. Locally `BACKEND_URL` is unset and `apiFetch` calls the backend directly. If login returns "Request failed", `BACKEND_URL` is usually missing or the deploy predates it — check `https://<vercel-url>/api/health`.
 
 **Backend env (Railway):**
 
@@ -147,4 +171,9 @@ The frontend serves the backend at a same-origin path so the auth cookie stays f
 
 `PORT` is injected by the host. `npm start` runs `node --env-file-if-exists=.env src/server.js`, so it works with or without a `.env` file.
 
-Seed once against the DB's public URL locally (`npm run seed` wipes everything), or create a single admin by hand.
+**Loading data** — pick one, run locally against the DB's **public** URL:
+
+- `npm run seed --prefix backend` with `MONGODB_URI` pointed at the target — wipes and reloads demo data.
+- `TARGET_URI=… node backend/scripts/copy-to-railway.mjs` — clones an existing database (documents + indexes), wiping the target first.
+
+If `copy-to-railway.mjs` reports `available disk space … is less than required minimum of 524288000`, MongoDB skipped the index builds (it needs ≥ 500 MB free). Grow the Railway volume, then run `TARGET_URI=… node backend/scripts/sync-indexes.mjs` to build every index the models declare (`--lower-threshold` also drops the 500 MB requirement to 50 MB for that mongod, if you have an admin user).
