@@ -87,9 +87,10 @@ export default function ManagementConsole({ title }) {
             </>
           )}
 
-          {/* The Overview tab (AttendanceOverview) already shows Notices & Meetings;
-              only render it here for the other tabs so it isn't duplicated. */}
-          {activeTab !== "overview" && (
+          {/* Notices & Meetings belongs on the first tab only. When "overview" is
+              the first tab, AttendanceOverview already renders it; for roles whose
+              first tab is something else, render it explicitly here. */}
+          {activeTab === TABS[0]?.key && activeTab !== "overview" && (
             <div className="mt-6">
               <h2 className="mb-3 text-sm font-semibold text-slate-900">Notices &amp; Meetings</h2>
               <NoticeBoard />
