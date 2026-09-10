@@ -21,8 +21,11 @@ export function proxy(request) {
 
 export const config = {
   matcher: [
-    // Exclude Next's static/image assets and the favicon; everything else
+    // Exclude the API proxy (/api/* is rewritten to the backend, which does its
+    // own auth — running this redirect on it turns an unauthenticated API call
+    // into a 307 to /login, and the browser replays the POST there as a 405),
+    // plus Next's static/image assets and the favicon. Everything else
     // (including any future page) is evaluated above.
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
