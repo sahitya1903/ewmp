@@ -1,5 +1,4 @@
 import ManagementCapability from "../models/ManagementCapability.js";
-import CustomRole from "../models/CustomRole.js";
 import {
   MANAGEMENT_CAPABILITIES,
   MANAGEMENT_CAPABILITY_KEYS,
@@ -7,13 +6,12 @@ import {
   DEFAULT_MANAGEMENT_CAPABILITIES,
 } from "../lib/managementCapabilities.js";
 import { getEnabledManagementCapabilities } from "../lib/managementAccess.js";
-import { isManagementRole } from "../lib/roleCategory.js";
+import { isManagementRole, customRoleNamesByBaseType } from "../lib/roleCategory.js";
 
-// HR/Accounts plus any custom management-category role Admin has added —
-// everyone this panel can configure.
+// HR/Accounts plus any custom role with a management base type Admin has
+// added — everyone this panel can configure.
 async function configurableManagementRoles() {
-  const customManagement = await CustomRole.find({ category: "management" }).select("name");
-  return [...MANAGEMENT_ROLES, ...customManagement.map((r) => r.name)];
+  return [...MANAGEMENT_ROLES, ...(await customRoleNamesByBaseType("management"))];
 }
 
 export async function listCapabilities(req, res) {

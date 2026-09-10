@@ -10,7 +10,7 @@ import {
 } from "../lib/auth.js";
 import { startOfDay } from "../lib/dates.js";
 import { getHolidaySet, isWorkingDay } from "../lib/workingDays.js";
-import { getRoleCategory } from "../lib/roleCategory.js";
+import { getRoleCategory, getRoleBaseType } from "../lib/roleCategory.js";
 import { slugifyRole } from "../lib/roleSlug.js";
 
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 30;
@@ -54,8 +54,8 @@ export async function login(req, res) {
   // lands on /dashboard.
   let redirectTo = ROLE_HOME[user.role];
   if (!redirectTo) {
-    const category = await getRoleCategory(user.role);
-    redirectTo = category === "management" ? `/${slugifyRole(user.role)}` : "/dashboard";
+    const baseType = await getRoleBaseType(user.role);
+    redirectTo = baseType === "management" ? `/${slugifyRole(user.role)}` : "/dashboard";
   }
 
   res.cookie("token", token, COOKIE_OPTIONS);
@@ -67,12 +67,13 @@ export async function me(req, res) {
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const category = await getRoleCategory(user.role);
+  const baseType = await getRoleBaseType(user.role);
 
   // Management roles never submit a daily work update — the action that
   // marks everyone else Present — so mark today's attendance for them here,
   // the first time they check their session each day. Skips weekly offs and
   // holidays, and never overrides an existing Absent/Leave record.
-  if (category === "management") {
+  if (baseType === "management") {
     const day = startOfDay();
     const holidaySet = await getHolidaySet(day, new Date(day.getTime() + 86400000));
     if (isWorkingDay(day, holidaySet)) {
@@ -85,7 +86,7 @@ export async function me(req, res) {
   }
 
   const profile = await EmployeeProfile.findOne({ user: user._id }).select("joiningDate");
-  res.json({ user: { ...user.toObject(), category, joiningDate: profile?.joiningDate ?? null } });
+  res.json({ user: { ...user.toObject(), category, baseType, joiningDate: profile?.joiningDate ?? null } });
 }
 
 export function logout(req, res) {

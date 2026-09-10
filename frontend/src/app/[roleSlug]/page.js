@@ -7,8 +7,8 @@ import ManagementConsole from "@/components/ManagementConsole";
 import { ROLE_LABELS } from "@/lib/roles";
 import { slugifyRole } from "@/lib/roleSlug";
 
-// Admin, HR, and Accounts each have their own dedicated page; a custom
-// management-category role (added via the "Add role" form) has no bespoke
+// Admin, HR, and Accounts each have their own dedicated page; a custom role
+// with a management base type (added via the "Add role" form) has no bespoke
 // route, so it lands here instead, at a URL slugged from its name (see
 // backend/src/lib/roleSlug.js, which computes the same slug for the login
 // redirect). Next.js resolves static routes like /admin ahead of this
@@ -25,7 +25,7 @@ export default function CustomRoleConsolePage() {
     apiFetch("/auth/me")
       .then(({ user }) => {
         if (cancelled) return;
-        if (user.category !== "management" || slugifyRole(user.role) !== params.roleSlug) {
+        if (user.baseType !== "management" || slugifyRole(user.role) !== params.roleSlug) {
           router.replace("/login");
           return;
         }

@@ -1,17 +1,16 @@
 import RolePermission from "../models/RolePermission.js";
-import CustomRole from "../models/CustomRole.js";
 import { ROLE_NAMES } from "../lib/roles.js";
 import { MODULES, MODULE_KEYS, UNRESTRICTED_ROLES } from "../lib/modules.js";
 import { getEnabledModules } from "../lib/rolePermissions.js";
+import { customRoleNamesByBaseType } from "../lib/roleCategory.js";
 
-// Every "employee" category role — built-in or custom. Management roles
-// (Admin, HR, Accounts_E, or a custom management role) are never listed
-// here; they always have full access and are configured on the management
-// capabilities panel instead.
+// Every role with an "employee" base type — built-in or custom. Roles with a
+// management base type (Admin, HR, Accounts_E, or a custom one) are never
+// listed here; they always have full access and are configured on the
+// management capabilities panel instead.
 async function configurableRoles() {
-  const custom = await CustomRole.find().select("name category");
   const builtinEmployee = ROLE_NAMES.filter((r) => !UNRESTRICTED_ROLES.includes(r));
-  const customEmployee = custom.filter((r) => r.category !== "management").map((r) => r.name);
+  const customEmployee = await customRoleNamesByBaseType("employee");
   return [...builtinEmployee, ...customEmployee];
 }
 

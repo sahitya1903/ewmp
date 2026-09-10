@@ -530,7 +530,7 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   return (
-    <RoleGuard deniedCategories={["management"]}>
+    <RoleGuard deniedBaseTypes={["management"]}>
       <EmployeeDashboard />
     </RoleGuard>
   );

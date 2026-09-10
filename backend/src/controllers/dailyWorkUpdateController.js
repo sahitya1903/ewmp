@@ -4,8 +4,7 @@ import User from "../models/User.js";
 import { startOfDay } from "../lib/dates.js";
 import { notify } from "../lib/notify.js";
 import { NO_DASHBOARD_ROLES } from "../lib/roles.js";
-import { isManagementRole } from "../lib/roleCategory.js";
-import CustomRole from "../models/CustomRole.js";
+import { isManagementRole, customRoleNamesByBaseType } from "../lib/roleCategory.js";
 
 function fmtDay(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -99,8 +98,8 @@ export async function listTodayStatus(req, res) {
   // Management roles never submit their own update, so they'd always show
   // as "not submitted" — exclude them (built-in and any custom management
   // role) rather than have the roster/counter be wrong.
-  const customManagement = await CustomRole.find({ category: "management" }).select("name");
-  const excludedRoles = [...NO_DASHBOARD_ROLES, ...customManagement.map((r) => r.name)];
+  const customManagement = await customRoleNamesByBaseType("management");
+  const excludedRoles = [...NO_DASHBOARD_ROLES, ...customManagement];
   const users = await User.find({ isActive: true, role: { $nin: excludedRoles } }).sort({ employeeId: 1 });
   const updates = await DailyWorkUpdate.find({ date: today }).populate("followUps.by", "name");
   const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));

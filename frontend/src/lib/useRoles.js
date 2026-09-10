@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 // Roles = the built-in set plus any custom roles a management role with the
-// "manageRoles" capability has added. Each entry is { name, category }.
+// "manageRoles" capability has added. Each entry is { name, category, isBuiltIn }.
 export function useRoles() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);

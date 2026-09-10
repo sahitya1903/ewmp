@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
 // Pass allowedRoles (only these exact roles get in), deniedRoles (everyone
-// except these roles gets in), deniedCategories (blocks a whole category —
-// "management" or "employee" — including any custom role in it, without
-// needing to know every role name ahead of time), or neither (any
-// authenticated user gets in).
-export default function RoleGuard({ allowedRoles, deniedRoles, deniedCategories, children }) {
+// except these roles gets in), deniedBaseTypes (blocks a whole base type —
+// "management" or "employee" — including any custom role/category resolving
+// to it, without needing to know every role name ahead of time), or neither
+// (any authenticated user gets in).
+export default function RoleGuard({ allowedRoles, deniedRoles, deniedBaseTypes, children }) {
   const router = useRouter();
   const [status, setStatus] = useState("checking");
 
@@ -19,8 +19,8 @@ export default function RoleGuard({ allowedRoles, deniedRoles, deniedCategories,
     apiFetch("/auth/me")
       .then(({ user }) => {
         if (cancelled) return;
-        const allowed = deniedCategories
-          ? !deniedCategories.includes(user.category)
+        const allowed = deniedBaseTypes
+          ? !deniedBaseTypes.includes(user.baseType)
           : deniedRoles
           ? !deniedRoles.includes(user.role)
           : allowedRoles
@@ -39,7 +39,7 @@ export default function RoleGuard({ allowedRoles, deniedRoles, deniedCategories,
     return () => {
       cancelled = true;
     };
-  }, [allowedRoles, deniedRoles, deniedCategories, router]);
+  }, [allowedRoles, deniedRoles, deniedBaseTypes, router]);
 
   if (status !== "ok") return null;
   return children;

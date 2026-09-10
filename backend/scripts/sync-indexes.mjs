@@ -25,6 +25,7 @@ import SalaryPayment from "../src/models/SalaryPayment.js";
 import Notification from "../src/models/Notification.js";
 import Notice from "../src/models/Notice.js";
 import CustomRole from "../src/models/CustomRole.js";
+import Category from "../src/models/Category.js";
 import ManagementCapability from "../src/models/ManagementCapability.js";
 import RolePermission from "../src/models/RolePermission.js";
 
@@ -48,6 +49,7 @@ const MODELS = [
   Notification,
   Notice,
   CustomRole,
+  Category,
   ManagementCapability,
   RolePermission,
 ];
