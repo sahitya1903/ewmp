@@ -87,9 +87,9 @@ export default function MyFollowUps() {
               }`}
             >
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                <span className="min-w-0 wrap-break-word text-sm font-medium text-slate-900">{u.currentProject}</span>
+                <span className="min-w-0 wrap-break-word text-sm font-medium text-slate-900">{u.todaysTask}</span>
                 <span className="shrink-0 text-xs text-slate-500">
-                  {formatDateDMY(u.date)} update
+                  {formatDateDMY(u.date)} {u.slot === "start" ? "start-of-day" : "end-of-day"} update
                   {u.followUpClosed && " · closed"}
                 </span>
               </div>

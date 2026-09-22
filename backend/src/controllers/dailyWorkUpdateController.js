@@ -42,10 +42,19 @@ export async function submitUpdate(req, res) {
     return res.status(403).json({ error: "This role doesn't submit daily work updates" });
   }
 
-  const { currentProject, todaysProgress, remainingWork, estimatedCompletion, additionalWork } = req.body;
+  const { slot, todaysTask, blocker, endGoal, progress } = req.body;
 
-  if (!currentProject || !todaysProgress || !remainingWork) {
-    return res.status(400).json({ error: "currentProject, todaysProgress, and remainingWork are required" });
+  if (!["start", "end"].includes(slot)) {
+    return res.status(400).json({ error: "slot must be 'start' or 'end'" });
+  }
+  if (!todaysTask || !blocker) {
+    return res.status(400).json({ error: "todaysTask and blocker are required" });
+  }
+  if (slot === "start" && !endGoal) {
+    return res.status(400).json({ error: "endGoal is required for the start-of-day update" });
+  }
+  if (slot === "end" && !progress) {
+    return res.status(400).json({ error: "progress is required for the end-of-day update" });
   }
 
   const existingAttendance = await Attendance.findOne({ user: req.user.sub, date: startOfDay() });
@@ -53,17 +62,22 @@ export async function submitUpdate(req, res) {
     return res.status(400).json({ error: `You're marked ${existingAttendance.status} today, so an update can't be submitted` });
   }
 
+  if (slot === "end") {
+    const startUpdate = await DailyWorkUpdate.findOne({ user: req.user.sub, date: startOfDay(), slot: "start" });
+    if (!startUpdate) {
+      return res.status(400).json({ error: "Submit the start-of-day update first" });
+    }
+  }
+
   // Only the content fields are $set — the follow-up thread is left untouched,
   // so editing the update never drops an existing follow-up request or reply.
   const update = await DailyWorkUpdate.findOneAndUpdate(
-    { user: req.user.sub, date: startOfDay() },
+    { user: req.user.sub, date: startOfDay(), slot },
     {
       $set: {
-        currentProject,
-        todaysProgress,
-        remainingWork,
-        estimatedCompletion: estimatedCompletion ? new Date(estimatedCompletion) : null,
-        additionalWork: additionalWork || "",
+        todaysTask,
+        blocker,
+        ...(slot === "start" ? { endGoal } : { progress }),
       },
     },
     { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
@@ -78,18 +92,21 @@ export async function submitUpdate(req, res) {
     { upsert: true, setDefaultsOnInsert: true }
   );
 
-  res.json({ update });
+  res.json({ update: toUpdateDTO(update, false) });
 }
 
 export async function getTodayUpdate(req, res) {
-  const update = await DailyWorkUpdate.findOne({ user: req.user.sub, date: startOfDay() }).populate(
+  const updates = await DailyWorkUpdate.find({ user: req.user.sub, date: startOfDay() }).populate(
     "followUps.by",
     "name"
   );
+  const start = updates.find((u) => u.slot === "start") ?? null;
+  const end = updates.find((u) => u.slot === "end") ?? null;
   res.json({
-    update: update
-      ? { ...update.toObject(), followUps: serializeFollowUps(update.followUps) }
-      : null,
+    update: {
+      start: start ? toUpdateDTO(start, false) : null,
+      end: end ? toUpdateDTO(end, false) : null,
+    },
   });
 }
 
@@ -102,16 +119,22 @@ export async function listTodayStatus(req, res) {
   const excludedRoles = [...NO_DASHBOARD_ROLES, ...customManagement];
   const users = await User.find({ isActive: true, role: { $nin: excludedRoles } }).sort({ employeeId: 1 });
   const updates = await DailyWorkUpdate.find({ date: today }).populate("followUps.by", "name");
-  const updatesByUserId = new Map(updates.map((u) => [u.user.toString(), u]));
+  const updatesByUserId = new Map();
+  for (const u of updates) {
+    const key = u.user.toString();
+    if (!updatesByUserId.has(key)) updatesByUserId.set(key, {});
+    updatesByUserId.get(key)[u.slot] = u;
+  }
 
   const statuses = users.map((user) => {
-    const update = updatesByUserId.get(user._id.toString());
+    const { start, end } = updatesByUserId.get(user._id.toString()) ?? {};
     return {
       user: { id: user._id, employeeId: user.employeeId, name: user.name, role: user.role },
-      submitted: Boolean(update),
-      updateId: update?._id ?? null,
-      currentProject: update?.currentProject ?? null,
-      followUps: update ? serializeFollowUps(update.followUps) : [],
+      submitted: Boolean(start) || Boolean(end),
+      startSubmitted: Boolean(start),
+      endSubmitted: Boolean(end),
+      updateIds: { start: start?._id ?? null, end: end?._id ?? null },
+      todaysTaskSnippet: end?.todaysTask ?? start?.todaysTask ?? null,
     };
   });
 
@@ -139,7 +162,7 @@ export async function listUpdates(req, res) {
   const updates = await DailyWorkUpdate.find(filter)
     .populate("user", "name employeeId role")
     .populate("followUps.by", "name")
-    .sort({ date: -1, createdAt: -1 });
+    .sort({ date: -1, slot: 1 });
 
   res.json({ updates: updates.map((u) => toUpdateDTO(u, true)) });
 }
@@ -151,11 +174,10 @@ function toUpdateDTO(u, withUser) {
       user: u.user ? { id: u.user._id, name: u.user.name, employeeId: u.user.employeeId } : null,
     }),
     date: u.date,
-    currentProject: u.currentProject,
-    todaysProgress: u.todaysProgress,
-    remainingWork: u.remainingWork,
-    estimatedCompletion: u.estimatedCompletion ?? null,
-    additionalWork: u.additionalWork || "",
+    slot: u.slot,
+    todaysTask: u.todaysTask,
+    blocker: u.blocker,
+    ...(u.slot === "start" ? { endGoal: u.endGoal } : { progress: u.progress }),
     submittedAt: u.createdAt,
     // Employees can revise the same day's update until midnight — surface
     // whether (and when) this one was edited after it was first submitted.

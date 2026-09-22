@@ -21,13 +21,8 @@ const STATUS_STYLES = {
 
 const ATTENDANCE_TYPE = { Present: "present", Absent: "absent", Leave: "leave" };
 
-const EMPTY_UPDATE_FORM = {
-  currentProject: "",
-  todaysProgress: "",
-  remainingWork: "",
-  estimatedCompletion: "",
-  additionalWork: "",
-};
+const EMPTY_START_FORM = { todaysTask: "", blocker: "", endGoal: "" };
+const EMPTY_END_FORM = { todaysTask: "", blocker: "", progress: "" };
 
 function EmployeeDashboard() {
   // Defaults to fully enabled so nothing flashes hidden while this loads;
@@ -56,10 +51,11 @@ function EmployeeDashboard() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [todayUpdate, setTodayUpdate] = useState(null);
+  const [todayUpdate, setTodayUpdate] = useState({ start: null, end: null });
   const [todayAttendance, setTodayAttendance] = useState(null);
-  const [updateFormOpen, setUpdateFormOpen] = useState(false);
-  const [updateForm, setUpdateForm] = useState(EMPTY_UPDATE_FORM);
+  // null when no form is open, else which slot's form is open.
+  const [activeSlotForm, setActiveSlotForm] = useState(null);
+  const [updateForm, setUpdateForm] = useState(EMPTY_START_FORM);
   const [updateError, setUpdateError] = useState("");
   const [updateSaving, setUpdateSaving] = useState(false);
 
@@ -99,7 +95,7 @@ function EmployeeDashboard() {
   function loadTodayUpdate() {
     return apiFetch("/daily-work-updates/today")
       .then((data) => setTodayUpdate(data.update))
-      .catch(() => setTodayUpdate(null));
+      .catch(() => setTodayUpdate({ start: null, end: null }));
   }
 
   // If an admin has already marked today's attendance directly, the employee
@@ -162,20 +158,18 @@ function EmployeeDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionsLoaded]);
 
-  function openUpdateForm() {
+  function openUpdateForm(slot) {
+    const existing = todayUpdate[slot];
+    const empty = slot === "start" ? EMPTY_START_FORM : EMPTY_END_FORM;
     setUpdateForm(
-      todayUpdate
-        ? {
-            currentProject: todayUpdate.currentProject,
-            todaysProgress: todayUpdate.todaysProgress,
-            remainingWork: todayUpdate.remainingWork,
-            estimatedCompletion: todayUpdate.estimatedCompletion ? todayUpdate.estimatedCompletion.slice(0, 10) : "",
-            additionalWork: todayUpdate.additionalWork ?? "",
-          }
-        : EMPTY_UPDATE_FORM
+      existing
+        ? slot === "start"
+          ? { todaysTask: existing.todaysTask, blocker: existing.blocker, endGoal: existing.endGoal }
+          : { todaysTask: existing.todaysTask, blocker: existing.blocker, progress: existing.progress }
+        : empty
     );
     setUpdateError("");
-    setUpdateFormOpen(true);
+    setActiveSlotForm(slot);
   }
 
   async function handleUpdateSubmit(e) {
@@ -185,9 +179,9 @@ function EmployeeDashboard() {
     try {
       await apiFetch("/daily-work-updates", {
         method: "POST",
-        body: JSON.stringify(updateForm),
+        body: JSON.stringify({ slot: activeSlotForm, ...updateForm }),
       });
-      setUpdateFormOpen(false);
+      setActiveSlotForm(null);
       await loadTodayUpdate();
       await loadTodayAttendance();
     } catch (err) {
@@ -244,34 +238,64 @@ function EmployeeDashboard() {
 
           {canUse("dailyWorkUpdate") && (
             <>
-              <div className="mb-6 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
-                  {todayUpdate ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.currentProject}
-                    </p>
-                  ) : todayAttendance === "Absent" ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      Marked <span className="font-medium text-red-700">Absent</span> today by Admin — no work update needed.
-                    </p>
-                  ) : todayAttendance === "Leave" ? (
-                    <p className="mt-1 text-sm text-slate-600">You&apos;re on approved leave today — no work update needed.</p>
-                  ) : todayAttendance === "Present" ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      Marked <span className="font-medium text-emerald-700">Present</span> today by Admin — a work update is optional.
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm text-amber-700">Not submitted yet today.</p>
-                  )}
-                </div>
-                {todayAttendance !== "Absent" && todayAttendance !== "Leave" && (
-                  <button
-                    onClick={openUpdateForm}
-                    className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
-                  >
-                    {todayUpdate ? "Edit update" : "Submit update"}
-                  </button>
+              <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+                <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work Update</h2>
+                {todayAttendance === "Absent" ? (
+                  <p className="mt-1 text-sm text-slate-600">
+                    Marked <span className="font-medium text-red-700">Absent</span> today by Admin — no work update needed.
+                  </p>
+                ) : todayAttendance === "Leave" ? (
+                  <p className="mt-1 text-sm text-slate-600">You&apos;re on approved leave today — no work update needed.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {todayAttendance === "Present" && (
+                      <p className="text-xs text-slate-500">
+                        Marked <span className="font-medium text-emerald-700">Present</span> today by Admin — work updates are optional.
+                      </p>
+                    )}
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">Start of day</p>
+                        {todayUpdate.start ? (
+                          <p className="text-sm text-slate-600">
+                            <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.start.todaysTask}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-amber-700">Not submitted yet.</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => openUpdateForm("start")}
+                        className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
+                      >
+                        {todayUpdate.start ? "Edit" : "Submit"}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">End of day</p>
+                        {todayUpdate.end ? (
+                          <p className="text-sm text-slate-600">
+                            <span className="font-medium text-emerald-700">Submitted</span> — {todayUpdate.end.todaysTask}
+                          </p>
+                        ) : todayUpdate.start ? (
+                          <p className="text-sm text-amber-700">Not submitted yet.</p>
+                        ) : (
+                          <p className="text-sm text-slate-500">Submit the start-of-day update first.</p>
+                        )}
+                      </div>
+                      {todayUpdate.start && (
+                        <button
+                          onClick={() => openUpdateForm("end")}
+                          className="self-start rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white sm:self-auto"
+                        >
+                          {todayUpdate.end ? "Edit" : "Submit"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -450,64 +474,66 @@ function EmployeeDashboard() {
           </div>
         )}
 
-        {updateFormOpen && (
+        {activeSlotForm && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/30 p-4">
             <form
               onSubmit={handleUpdateSubmit}
               className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
             >
-              <h2 className="mb-4 text-lg font-semibold text-slate-900">Today&apos;s work update</h2>
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">
+                {activeSlotForm === "start" ? "Start of day" : "End of day"} update
+              </h2>
 
-              <label className="mb-1 block text-xs font-medium text-slate-700">Current project</label>
-              <input
-                required
-                value={updateForm.currentProject}
-                onChange={(e) => setUpdateForm({ ...updateForm, currentProject: e.target.value })}
-                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-
-              <label className="mb-1 block text-xs font-medium text-slate-700">Today&apos;s progress</label>
+              <label className="mb-1 block text-xs font-medium text-slate-700">Today&apos;s task</label>
               <textarea
                 required
-                value={updateForm.todaysProgress}
-                onChange={(e) => setUpdateForm({ ...updateForm, todaysProgress: e.target.value })}
-                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
-                rows={2}
-              />
-
-              <label className="mb-1 block text-xs font-medium text-slate-700">Remaining work</label>
-              <textarea
-                required
-                value={updateForm.remainingWork}
-                onChange={(e) => setUpdateForm({ ...updateForm, remainingWork: e.target.value })}
+                value={updateForm.todaysTask}
+                onChange={(e) => setUpdateForm({ ...updateForm, todaysTask: e.target.value })}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
                 rows={2}
               />
 
               <label className="mb-1 block text-xs font-medium text-slate-700">
-                Estimated completion (optional)
+                Blocker (any dependencies on other)
               </label>
-              <input
-                type="date"
-                value={updateForm.estimatedCompletion}
-                onChange={(e) => setUpdateForm({ ...updateForm, estimatedCompletion: e.target.value })}
-                className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-
-              <label className="mb-1 block text-xs font-medium text-slate-700">Additional work (optional)</label>
               <textarea
-                value={updateForm.additionalWork}
-                onChange={(e) => setUpdateForm({ ...updateForm, additionalWork: e.target.value })}
+                required
+                value={updateForm.blocker}
+                onChange={(e) => setUpdateForm({ ...updateForm, blocker: e.target.value })}
                 className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
                 rows={2}
               />
+
+              {activeSlotForm === "start" ? (
+                <>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">End goal</label>
+                  <textarea
+                    required
+                    value={updateForm.endGoal}
+                    onChange={(e) => setUpdateForm({ ...updateForm, endGoal: e.target.value })}
+                    className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                    rows={2}
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">Progress</label>
+                  <textarea
+                    required
+                    value={updateForm.progress}
+                    onChange={(e) => setUpdateForm({ ...updateForm, progress: e.target.value })}
+                    className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                    rows={2}
+                  />
+                </>
+              )}
 
               {updateError && <p className="mb-3 text-sm text-red-600">{updateError}</p>}
 
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setUpdateFormOpen(false)}
+                  onClick={() => setActiveSlotForm(null)}
                   className="rounded px-4 py-2 text-sm text-slate-600"
                 >
                   Cancel

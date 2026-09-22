@@ -116,7 +116,8 @@ export default function WorkUpdatesPanel() {
     }
   }
 
-  const notSubmittedToday = todayStatuses.filter((s) => !s.submitted);
+  const notStartedToday = todayStatuses.filter((s) => !s.startSubmitted);
+  const notEndedToday = todayStatuses.filter((s) => !s.endSubmitted);
   const visibleUpdates = dateFilter ? updates.filter((u) => toDateKey(u.date) === dateFilter) : updates;
 
   return (
@@ -162,14 +163,26 @@ export default function WorkUpdatesPanel() {
 
       {isCurrentMonth && (
         <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-          <span className="font-medium text-slate-900">
-            Today: {todayStatuses.length - notSubmittedToday.length} / {todayStatuses.length} submitted
-          </span>
-          {notSubmittedToday.length > 0 && (
-            <p className="mt-1 text-xs text-amber-700">
-              Not yet: {notSubmittedToday.map((s) => s.user.name).join(", ")}
-            </p>
-          )}
+          <div>
+            <span className="font-medium text-slate-900">
+              Start of day: {todayStatuses.length - notStartedToday.length} / {todayStatuses.length} submitted
+            </span>
+            {notStartedToday.length > 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                Not yet: {notStartedToday.map((s) => s.user.name).join(", ")}
+              </p>
+            )}
+          </div>
+          <div className="mt-2 border-t border-slate-100 pt-2">
+            <span className="font-medium text-slate-900">
+              End of day: {todayStatuses.length - notEndedToday.length} / {todayStatuses.length} submitted
+            </span>
+            {notEndedToday.length > 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                Not yet: {notEndedToday.map((s) => s.user.name).join(", ")}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -198,6 +211,9 @@ export default function WorkUpdatesPanel() {
                 <h3 className="text-sm font-semibold text-slate-900">
                   {u.user ? `${u.user.name} (${u.user.employeeId})` : "—"}
                   <span className="ml-2 font-normal text-slate-500">{formatDateDMY(u.date)}</span>
+                  <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                    {u.slot === "start" ? "Start of day" : "End of day"}
+                  </span>
                   {u.awaitingResponse && (
                     <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       Follow-up pending
@@ -216,18 +232,19 @@ export default function WorkUpdatesPanel() {
               </div>
 
               <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[9rem_1fr]">
-                <dt className="text-slate-500">Project</dt>
-                <dd className="text-slate-800">{u.currentProject}</dd>
-                <dt className="text-slate-500">Today&apos;s progress</dt>
-                <dd className="whitespace-pre-line text-slate-800">{u.todaysProgress}</dd>
-                <dt className="text-slate-500">Remaining work</dt>
-                <dd className="whitespace-pre-line text-slate-800">{u.remainingWork || "—"}</dd>
-                <dt className="text-slate-500">Est. completion</dt>
-                <dd className="text-slate-800">{u.estimatedCompletion ? formatDateDMY(u.estimatedCompletion) : "—"}</dd>
-                {u.additionalWork && (
+                <dt className="text-slate-500">Today&apos;s task</dt>
+                <dd className="whitespace-pre-line text-slate-800">{u.todaysTask}</dd>
+                <dt className="text-slate-500">Blocker</dt>
+                <dd className="whitespace-pre-line text-slate-800">{u.blocker}</dd>
+                {u.slot === "start" ? (
                   <>
-                    <dt className="text-slate-500">Additional work</dt>
-                    <dd className="whitespace-pre-line text-slate-800">{u.additionalWork}</dd>
+                    <dt className="text-slate-500">End goal</dt>
+                    <dd className="whitespace-pre-line text-slate-800">{u.endGoal}</dd>
+                  </>
+                ) : (
+                  <>
+                    <dt className="text-slate-500">Progress</dt>
+                    <dd className="whitespace-pre-line text-slate-800">{u.progress}</dd>
                   </>
                 )}
               </dl>

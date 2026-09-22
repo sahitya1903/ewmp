@@ -228,11 +228,20 @@ async function seed() {
     {
       user: dev1._id,
       date: new Date("2026-08-21"),
-      currentProject: "Employee Work Management Portal",
-      todaysProgress: "Built auth API and login page",
-      remainingWork: "Role-based dashboards",
-      estimatedCompletion: new Date("2026-08-30"),
-      additionalWork: "",
+      slot: "start",
+      todaysTask: "Build auth API and login page",
+      blocker: "None",
+      endGoal: "Auth API and login page working end-to-end",
+      createdAt: submittedAt("2026-08-21", 9),
+      updatedAt: submittedAt("2026-08-21", 9),
+    },
+    {
+      user: dev1._id,
+      date: new Date("2026-08-21"),
+      slot: "end",
+      todaysTask: "Built auth API and login page",
+      blocker: "None",
+      progress: "Auth API and login page done; role-based dashboards still remain",
       createdAt: submittedAt("2026-08-21", 17),
       updatedAt: submittedAt("2026-08-21", 20), // revised later that evening
       // A resolved, closed follow-up thread — shows under "past follow-ups".
@@ -256,19 +265,28 @@ async function seed() {
     {
       user: dev2._id,
       date: new Date("2026-08-27"),
-      currentProject: "Internal Billing Tool",
-      todaysProgress: "Fixed invoice PDF export bug",
-      remainingWork: "Write regression tests",
-      estimatedCompletion: new Date("2026-09-03"),
-      additionalWork: "Helped onboard new intern",
+      slot: "start",
+      todaysTask: "Fix invoice PDF export bug",
+      blocker: "None",
+      endGoal: "Invoice PDF export working for all templates",
+      createdAt: submittedAt("2026-08-27", 9),
+      updatedAt: submittedAt("2026-08-27", 9),
+    },
+    {
+      user: dev2._id,
+      date: new Date("2026-08-27"),
+      slot: "end",
+      todaysTask: "Fixed invoice PDF export bug",
+      blocker: "None",
+      progress: "Export bug fixed; also helped onboard the new intern",
       createdAt: submittedAt("2026-08-27", 18),
       updatedAt: submittedAt("2026-08-27", 18),
     },
   ];
   const handWrittenKeys = new Set(HAND_WRITTEN_UPDATES.map((u) => `${u.user.toString()}:${dateKey(u.date)}`));
 
-  const PROJECT_POOL = [
-    "Employee Work Management Portal",
+  const TASK_POOL = [
+    "Employee Work Management Portal — dashboard work",
     "Customer Support Ticketing Revamp",
     "Mobile App Performance Audit",
     "Q3 Marketing Analytics Dashboard",
@@ -277,6 +295,13 @@ async function seed() {
     "Onboarding Experience Redesign",
     "Vendor Invoice Reconciliation Tool",
   ];
+  const BLOCKER_NOTES = [
+    "None",
+    "Waiting on review feedback from a teammate",
+    "Blocked on API access from another team",
+    "Needs design sign-off before continuing",
+    "None",
+  ];
   const PROGRESS_NOTES = [
     "Made steady progress on the assigned task.",
     "Completed a major chunk of planned work.",
@@ -284,16 +309,9 @@ async function seed() {
     "Wrapped up review comments from yesterday.",
     "Paired with a teammate to unblock a dependency.",
   ];
-  const REMAINING_NOTES = [
-    "A few edge cases left to handle.",
-    "Needs a round of testing before it is done.",
-    "Waiting on review feedback.",
-    "Documentation still pending.",
-    "Should be wrapped up by end of week.",
-  ];
 
-  // Each employee sticks to one randomly-picked project across their whole history.
-  const projectByUserId = new Map(users.map((u) => [u._id.toString(), pick(PROJECT_POOL)]));
+  // Each employee sticks to one randomly-picked task thread across their whole history.
+  const taskByUserId = new Map(users.map((u) => [u._id.toString(), pick(TASK_POOL)]));
 
   const generatedAttendance = [];
   const generatedUpdates = [];
@@ -310,14 +328,24 @@ async function seed() {
           // Admin/HR/Accounts never submit daily work updates — see
           // authController.me, which marks their attendance on login instead.
           if (!handWrittenKeys.has(key) && !NO_DASHBOARD_ROLES.includes(SAMPLE_USERS[i].role)) {
+            const task = taskByUserId.get(user._id.toString());
             generatedUpdates.push({
               user: user._id,
               date: new Date(cursor),
-              currentProject: projectByUserId.get(user._id.toString()),
-              todaysProgress: pick(PROGRESS_NOTES),
-              remainingWork: pick(REMAINING_NOTES),
-              estimatedCompletion: null,
-              additionalWork: "",
+              slot: "start",
+              todaysTask: task,
+              blocker: pick(BLOCKER_NOTES),
+              endGoal: `Move ${task} forward`,
+              createdAt: submittedAt(cursor, 9),
+              updatedAt: submittedAt(cursor, 9),
+            });
+            generatedUpdates.push({
+              user: user._id,
+              date: new Date(cursor),
+              slot: "end",
+              todaysTask: task,
+              blocker: pick(BLOCKER_NOTES),
+              progress: pick(PROGRESS_NOTES),
               createdAt: submittedAt(cursor),
               updatedAt: submittedAt(cursor),
             });
@@ -333,9 +361,9 @@ async function seed() {
   // overwritten with "now".
   await DailyWorkUpdate.insertMany([...HAND_WRITTEN_UPDATES, ...generatedUpdates], { timestamps: false });
 
-  // An open follow-up on dev1's most recent update, so logging in as dev1 shows
-  // an actionable "Follow-up requests" card on the dashboard.
-  const dev1Latest = await DailyWorkUpdate.findOne({ user: dev1._id }).sort({ date: -1 });
+  // An open follow-up on dev1's most recent end-of-day update, so logging in as
+  // dev1 shows an actionable "Follow-up requests" card on the dashboard.
+  const dev1Latest = await DailyWorkUpdate.findOne({ user: dev1._id, slot: "end" }).sort({ date: -1 });
   if (dev1Latest) {
     dev1Latest.followUps.push({
       kind: "request",

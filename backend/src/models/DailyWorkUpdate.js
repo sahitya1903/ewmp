@@ -16,11 +16,14 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     date: { type: Date, required: true },
-    currentProject: { type: String, required: true },
-    todaysProgress: { type: String, required: true },
-    remainingWork: { type: String },
-    estimatedCompletion: { type: Date },
-    additionalWork: { type: String },
+    // Each day gets two entries: a "start" (today's task / blocker / end goal)
+    // and an "end" (today's task / blocker / progress) — see the controller
+    // for the per-slot required-field rules and submission order.
+    slot: { type: String, enum: ["start", "end"], required: true },
+    todaysTask: { type: String, required: true },
+    blocker: { type: String, required: true },
+    endGoal: { type: String },
+    progress: { type: String },
     followUps: { type: [followUpEntrySchema], default: [] },
     // Set when a reviewer ends the follow-up conversation; cleared if a reviewer
     // opens a new request on the same update.
@@ -30,6 +33,6 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-dailyWorkUpdateSchema.index({ user: 1, date: 1 }, { unique: true });
+dailyWorkUpdateSchema.index({ user: 1, date: 1, slot: 1 }, { unique: true });
 
 export default mongoose.models.DailyWorkUpdate || mongoose.model("DailyWorkUpdate", dailyWorkUpdateSchema);

@@ -19,6 +19,14 @@ export async function connectDB() {
     cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    // Don't leave a rejected promise cached — on a serverless platform, a warm
+    // instance would otherwise keep re-throwing this same failure forever,
+    // even after the underlying issue (e.g. an IP allowlist change) is fixed.
+    cached.promise = null;
+    throw err;
+  }
   return cached.conn;
 }
