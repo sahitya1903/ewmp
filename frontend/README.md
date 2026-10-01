@@ -14,7 +14,7 @@ See the [root README](../README.md) for setup, roles, the API reference, and how
 
 ## Layout
 
-- `src/app/` — one folder per route (`login`, `dashboard`, `admin`, `hr`, `accounts`, `change-password`, `forgot-password`, `reset-password`).
+- `src/app/` — one folder per route (`login`, `dashboard`, `admin`, `hr`, `accounts`, `change-password`, `forgot-password`, `reset-password`); `[roleSlug]/` is the console for custom management roles.
 - `src/components/` — shared UI (`SalaryTable`, `MonthCalendar`, `NotificationBell`, `AttendanceOverview`, …).
 - `src/lib/` — `api.js` fetch wrapper, `format.js` / `month.js` helpers, hooks (`useSalaries`, `useRoles`), `roles.js` labels.
-- `src/middleware.js` — redirects unauthenticated users away from protected route prefixes.
+- `src/proxy.js` — Next's request middleware: redirects to `/login` when the `token` cookie is missing (every route except the public ones and `/api/*`).
