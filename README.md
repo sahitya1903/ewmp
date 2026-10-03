@@ -140,7 +140,8 @@ backend/src/
                      workingDays, leavePolicy, salaryCalc
   middleware/        authGuard.js — cookie→req.user, plus role / module / capability guards
   scripts/           seed.mjs (wipe + reload demo data),
-                     copy-to-railway.mjs (clone a DB), sync-indexes.mjs (rebuild indexes)
+                     copy-db.mjs (clone a DB into another, e.g. local → Atlas),
+                     backfill-work-updates.mjs (top up work updates through today)
 
 frontend/src/
   app/               one folder per route (login, dashboard, admin, hr, accounts, …);
@@ -161,24 +162,23 @@ frontend/src/
 
 ## Deployment
 
-Frontend on Vercel (root dir `frontend`), backend + MongoDB on one Railway project (backend root dir `backend`). Full runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md).
+Serverless on Vercel as **two projects from this repo**: the backend (root dir `backend`, framework preset **Other**, entry point `api/index.js`) and the frontend (root dir `frontend`, Next.js), plus a MongoDB database such as Atlas. Full step-by-step guide, including creating and connecting the database: [`VERCEL_DEPLOYMENT.pdf`](VERCEL_DEPLOYMENT.pdf).
 
-The frontend serves the backend at a same-origin path so the auth cookie stays first-party: set **`BACKEND_URL`** (e.g. `https://api.up.railway.app`, no `NEXT_PUBLIC_` prefix, no trailing slash) on Vercel and `NEXT_PUBLIC_API_URL=/api`; `next.config.mjs` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`. Locally `BACKEND_URL` is unset and `apiFetch` calls the backend directly. If login returns "Request failed", `BACKEND_URL` is usually missing or the deploy predates it — check `https://<vercel-url>/api/health`.
+The frontend serves the backend at a same-origin path so the auth cookie stays first-party: set **`BACKEND_URL`** (the backend project's production URL, no `NEXT_PUBLIC_` prefix, no trailing slash) and `NEXT_PUBLIC_API_URL=/api` on the frontend project; `next.config.mjs` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`. Both are read at build time, so redeploy after changing them. Locally `BACKEND_URL` is unset and `apiFetch` calls the backend directly. If login returns "Request failed", check `https://<frontend-url>/api/health`.
 
-**Backend env (Railway):**
+**Backend env (Vercel backend project):**
 
 | Key | Notes |
 |---|---|
-| `MONGODB_URI` | `${{MongoDB.MONGO_PRIVATE_URL}}/ewmp?authSource=admin` |
+| `MONGODB_URI` | e.g. `mongodb+srv://user:pass@cluster.mongodb.net/ewmp?retryWrites=true&w=majority`; the `/ewmp` database name is required |
 | `JWT_SECRET` | long random string |
-| `NODE_ENV` | `production` — enables `Secure` cookies, stops `forgot-password` returning the reset URL |
-| `CORS_ORIGIN` · `FRONTEND_URL` | the Vercel URL |
+| `NODE_ENV` | `production`: enables `Secure` cookies, stops `forgot-password` returning the reset URL |
+| `CORS_ORIGIN` · `FRONTEND_URL` | the frontend's URL |
 
-`PORT` is injected by the host. `npm start` runs `node --env-file-if-exists=.env src/server.js`, so it works with or without a `.env` file.
+Don't set `PORT`; only `src/server.js` (local dev) reads it. Atlas must allow connections from anywhere (`0.0.0.0/0`), since Vercel functions have no fixed IPs. Vercel applies env changes only on the next deploy.
 
-**Loading data** — pick one, run locally against the DB's **public** URL:
+**Loading data**: run locally against the target database:
 
-- `npm run seed --prefix backend` with `MONGODB_URI` pointed at the target — wipes and reloads demo data.
-- `TARGET_URI=… node backend/scripts/copy-to-railway.mjs` — clones an existing database (documents + indexes), wiping the target first.
-
-If `copy-to-railway.mjs` reports `available disk space … is less than required minimum of 524288000`, MongoDB skipped the index builds (it needs ≥ 500 MB free). Grow the Railway volume, then run `TARGET_URI=… node backend/scripts/sync-indexes.mjs` to build every index the models declare (`--lower-threshold` also drops the 500 MB requirement to 50 MB for that mongod, if you have an admin user).
+- `npm run seed --prefix backend` with `MONGODB_URI` pointed at the target wipes and reloads demo data.
+- `TARGET_URI=… npm run copy-db --prefix backend` clones a database (default source: local `ewmp`) into the target, wiping it first. Indexes are built from the model schemas, and collections with no model are skipped.
+- `npm run backfill-updates --prefix backend` (uses `MONGODB_URI`) tops up start/end-of-day work updates for every employee through today, marks those days Present, and converts any legacy single-form updates. It never wipes anything, and re-running it adds only what's missing.
