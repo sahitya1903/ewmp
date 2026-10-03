@@ -1,11 +1,5 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI environment variable");
-}
-
 let cached = global._mongoose;
 
 if (!cached) {
@@ -14,6 +8,15 @@ if (!cached) {
 
 export async function connectDB() {
   if (cached.conn) return cached.conn;
+
+  // Checked here rather than at import time so the serverless handler can
+  // catch it and report it, instead of the function crashing on load.
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    const err = new Error("Missing MONGODB_URI environment variable");
+    err.name = "MissingMongoUri";
+    throw err;
+  }
 
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
